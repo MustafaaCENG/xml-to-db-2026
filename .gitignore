@@ -1,0 +1,69 @@
+# User-defined project specific
+/installer
+/scripts
+/test-error
+/test-input
+/test-output
+/test-xml
+
+# .NET / C# standard gitignore
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio Visual Studio folders and files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+
+## Rider / JetBrains tools
+.idea/
+*.sln.iml
+
+## OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+## Nuget packages
+*.nupkg
+packages/
+
+## Code coverage
+*.coverage
+*.coveragexml
+CoverageReport/
+
+## Test results
+TestResults/
+
+## Application crash and logs
+*.log
+
+## Others
+*.cache
+*.bak
+*.tmp
+*.temp
