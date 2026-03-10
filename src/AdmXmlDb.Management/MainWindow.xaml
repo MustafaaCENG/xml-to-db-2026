@@ -8,9 +8,9 @@
         xmlns:core="clr-namespace:AdmXmlDb.Core;assembly=AdmXmlDb.Core"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="AdmXmlDb - XML to Database Integration" Height="800" Width="1200"
+        Title="XML Processor" Height="800" Width="1280"
         WindowStartupLocation="CenterScreen"
-        Background="#0F172A"
+        Background="#F0F0F0"
         WindowStyle="SingleBorderWindow"
         Icon="pack://application:,,,/AdmXmlDb.Management;component/Assets/Logo.png">
     <Window.Resources>
@@ -20,538 +20,489 @@
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
     </Window.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Border Grid.Row="0" Background="#0F172A" Padding="16,12" BorderBrush="#334155" BorderThickness="0,0,0,1">
-            <Image Source="pack://application:,,,/AdmXmlDb.Management;component/Assets/Logo.png" Height="32" Stretch="Uniform" HorizontalAlignment="Left"/>
-        </Border>
-        <TabControl Grid.Row="1" Style="{StaticResource SidebarTabControlStyle}">
-            <TabControl.Resources>
-                <Style TargetType="TabItem" BasedOn="{StaticResource SidebarTabItem}"/>
-            </TabControl.Resources>
-                    <TabItem Header="Dashboard">
-                        <Grid Margin="24,24">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0" Padding="24" Margin="0,0,0,20" Background="#334155"
-                                    BorderBrush="#475569" BorderThickness="1" CornerRadius="12">
-                                <Grid>
+    <DockPanel>
+        <!-- Top Menu Bar -->
+        <Menu DockPanel.Dock="Top" Background="#F0F0F0" FontSize="12">
+            <MenuItem Header="_File" Tag="loc:menu_file">
+                <MenuItem Header="Save Config" Tag="loc:menu_config_save" x:Name="MenuConfigSave" Click="ConfigSaveBtn_Click"/>
+                <MenuItem Header="Load Config" Tag="loc:menu_config_load" x:Name="MenuConfigLoad" Click="ConfigLoadBtn_Click"/>
+                <Separator/>
+                <MenuItem Header="Exit" Tag="loc:menu_exit" Click="MenuExit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Language" Tag="loc:menu_language">
+                <MenuItem Header="Türkçe" x:Name="MenuLangTr" Click="MenuLang_Click" Tag="tr" IsCheckable="True" IsChecked="True"/>
+                <MenuItem Header="English" x:Name="MenuLangEn" Click="MenuLang_Click" Tag="en" IsCheckable="True"/>
+            </MenuItem>
+            <MenuItem Header="_Help" Tag="loc:menu_help">
+                <MenuItem Header="About" Tag="loc:menu_about" Click="MenuAbout_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Main Tab Control - Top Tabs -->
+        <TabControl Margin="4" FontSize="12">
+
+            <!-- ==================== TAB 1: TASK MANAGEMENT ==================== -->
+            <TabItem Header="Task Management" Tag="loc:tab_task_mgmt">
+                <Grid Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" MinHeight="200"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*" MinHeight="150"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- TOP SECTION: 3 columns -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="210"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="280"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Database Connection -->
+                        <GroupBox Grid.Column="0" Header="Database Connection" Tag="loc:grp_db_connection"
+                                  Style="{StaticResource ClassicGroupBox}" Margin="0,0,4,0">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <TextBlock Text="Server" Tag="loc:lbl_server" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox x:Name="TaskDbHost" FontSize="11" Margin="0,0,0,6"/>
+
+                                    <GroupBox Header="Authentication" Tag="loc:grp_auth" FontSize="11" Padding="4" Margin="0,0,0,6">
+                                        <StackPanel>
+                                            <RadioButton x:Name="AuthWindows" Content="Windows Authentication" Tag="loc:radio_win_auth"
+                                                         FontSize="11" GroupName="AuthType" IsChecked="True" Margin="0,2,0,2"
+                                                         Checked="AuthType_Changed"/>
+                                            <RadioButton x:Name="AuthSql" Content="SQL Server Authentication" Tag="loc:radio_sql_auth"
+                                                         FontSize="11" GroupName="AuthType" Margin="0,0,0,0"
+                                                         Checked="AuthType_Changed"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="Login" Tag="loc:grp_login" FontSize="11" Padding="4" Margin="0,0,0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="Username" Tag="loc:lbl_username" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="TaskDbUser" FontSize="11" Margin="0,0,0,4"
+                                                     IsEnabled="{Binding IsChecked, ElementName=AuthSql}"/>
+                                            <TextBlock Text="Password" Tag="loc:lbl_password" Style="{StaticResource FieldLabel}"/>
+                                            <PasswordBox x:Name="TaskDbPassword" FontSize="11"
+                                                         IsEnabled="{Binding IsChecked, ElementName=AuthSql}"/>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <Button Content="Connect" Tag="loc:btn_connect" x:Name="TaskDbConnectBtn"
+                                            Click="TaskDbConnectBtn_Click"
+                                            Style="{StaticResource ClassicButton}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+
+                                    <TextBlock Text="Databases" Tag="loc:lbl_databases" Style="{StaticResource FieldLabel}" FontWeight="SemiBold"/>
+                                    <ComboBox x:Name="DatabasesCombo" FontSize="11" Margin="0,0,0,6"
+                                              SelectionChanged="DatabasesCombo_SelectionChanged"/>
+
+                                    <TextBlock Text="Tables" Tag="loc:lbl_tables" Style="{StaticResource FieldLabel}" FontWeight="SemiBold"/>
+                                    <ListBox x:Name="TaskTablesList" FontSize="10" MinHeight="50" MaxHeight="120"
+                                             BorderBrush="#ACACAC" BorderThickness="1" Margin="0,0,0,6"
+                                             SelectionChanged="TaskTablesList_SelectionChanged"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+
+                                    <TextBlock Text="Columns" Tag="loc:lbl_columns" Style="{StaticResource FieldLabel}" FontWeight="SemiBold"/>
+                                    <ListBox x:Name="TaskColumnsListLeft" FontSize="10" MinHeight="40" MaxHeight="120"
+                                             BorderBrush="#ACACAC" BorderThickness="1"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </GroupBox>
+
+                        <!-- CENTER COLUMN: Load XML + XML View + Tree View -->
+                        <DockPanel Grid.Column="1" Margin="4,0,4,0">
+                            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+                                <Button Content="Load XML" Tag="loc:btn_load_xml" x:Name="LoadTaskXmlBtn"
+                                        Click="LoadTaskXmlBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
+                                <CheckBox x:Name="TaskMultiRecord" Content="Has more than one document node"
+                                          Tag="loc:chk_multi_record" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <GroupBox Grid.Column="0" Header="XML View" Tag="loc:grp_xml_view" FontSize="11" Margin="0,0,4,0">
+                                    <TextBox x:Name="XmlViewBox" IsReadOnly="True" TextWrapping="NoWrap"
+                                             AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             FontFamily="Consolas" FontSize="11" Background="White"/>
+                                </GroupBox>
+
+                                <GroupBox Grid.Column="1" Header="Tree View" Tag="loc:grp_tree_view" FontSize="11" Margin="4,0,0,0">
+                                    <DockPanel>
+                                        <Button x:Name="AddToMappingBtn" DockPanel.Dock="Bottom"
+                                                Content="Add to Mapping" Tag="loc:btn_add_mapping" FontSize="11"
+                                                Click="AddToMappingBtn_Click" Style="{StaticResource PrimaryActionButton}"
+                                                HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                                        <TreeView x:Name="XmlTreeView" FontSize="11" Background="White"
+                                                  BorderThickness="0"
+                                                  SelectedItemChanged="XmlTreeView_SelectedItemChanged"/>
+                                    </DockPanel>
+                                </GroupBox>
+                            </Grid>
+                        </DockPanel>
+
+                        <!-- RIGHT COLUMN: Input / Output / Error / Preview -->
+                        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                      Margin="4,0,0,0">
+                            <StackPanel>
+                                <GroupBox Header="Input" Tag="loc:grp_input" Style="{StaticResource ClassicGroupBox}" Padding="4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="..." Width="24" Margin="4,0,0,0"
+                                                Style="{StaticResource ClassicButton}" Click="BrowseInputPath_Click"/>
+                                        <TextBox x:Name="TaskInputPath" IsReadOnly="True" FontSize="11"/>
+                                    </DockPanel>
+                                </GroupBox>
+
+                                <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,2,0,0"/>
+                                <TextBlock x:Name="InputPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                           TextTrimming="CharacterEllipsis"/>
+
+                                <GroupBox Header="Output" Tag="loc:grp_output" Style="{StaticResource ClassicGroupBox}" Padding="4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="..." Width="24" Margin="4,0,0,0"
+                                                Style="{StaticResource ClassicButton}" Click="BrowseOutputPath_Click"/>
+                                        <TextBox x:Name="TaskOutputPath" IsReadOnly="True" FontSize="11"/>
+                                    </DockPanel>
+                                </GroupBox>
+
+                                <StackPanel Margin="6,2,6,0">
+                                    <TextBlock Text="File Name Suffix" Tag="loc:lbl_file_suffix" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox x:Name="TaskFileNameSuffix" FontSize="11" Margin="0,0,0,4"
+                                             TextChanged="FileNamePreview_Changed"/>
+                                    <CheckBox x:Name="TaskAddDateTime" Content="Add DateTime" Tag="loc:chk_add_datetime"
+                                              FontSize="11" Margin="0,0,0,4"
+                                              Checked="FileNamePreview_Changed" Unchecked="FileNamePreview_Changed"/>
+                                </StackPanel>
+
+                                <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,0,0,0"/>
+                                <TextBlock x:Name="OutputPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                           TextWrapping="Wrap"/>
+
+                                <GroupBox Header="Error" Tag="loc:grp_error" Style="{StaticResource ClassicGroupBox}" Padding="4">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="..." Width="24" Margin="4,0,0,0"
+                                                Style="{StaticResource ClassicButton}" Click="BrowseErrorPath_Click"/>
+                                        <TextBox x:Name="TaskErrorPath" IsReadOnly="True" FontSize="11"/>
+                                    </DockPanel>
+                                </GroupBox>
+
+                                <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,2,0,0"/>
+                                <TextBlock x:Name="ErrorPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- SPLITTER -->
+                    <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center" Background="#F0F0F0"/>
+
+                    <!-- BOTTOM SECTION: Mapping + Actions -->
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <GroupBox Grid.Row="0" Header="Mapping" Tag="loc:grp_mapping" Style="{StaticResource ClassicGroupBox}">
+                            <DataGrid x:Name="MappingsGrid" AutoGenerateColumns="False"
+                                      CanUserAddRows="True" CanUserDeleteRows="True"
+                                      HeadersVisibility="Column" FontSize="11"
+                                      CanUserResizeColumns="True" Background="White"
+                                      GridLinesVisibility="All"
+                                      HorizontalGridLinesBrush="#D0D0D0"
+                                      VerticalGridLinesBrush="#D0D0D0"
+                                      AlternatingRowBackground="#F7F7F7"
+                                      RowBackground="White"
+                                      BorderBrush="#ACACAC" BorderThickness="1">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Priority" Binding="{Binding SortOrder}" Width="55"/>
+                                    <DataGridTextColumn Header="Column Name" Binding="{Binding ColumnName}" Width="120"/>
+                                    <DataGridComboBoxColumn Header="Data Type" Width="90"
+                                                           SelectedItemBinding="{Binding SqlDataType}"
+                                                           ItemsSource="{Binding Source={StaticResource SqlTypeEnum}}"/>
+                                    <DataGridTextColumn Header="XML Node" Binding="{Binding XPath}" Width="250"/>
+                                    <DataGridTextColumn Header="Search Term" Binding="{Binding FindValue}" Width="90"/>
+                                    <DataGridTextColumn Header="Replace With" Binding="{Binding ReplaceValue}" Width="90"/>
+                                    <DataGridTextColumn Header="XML Node Default Value" Binding="{Binding DefaultValue}" Width="140"/>
+                                    <DataGridTextColumn Header="Value Template" Binding="{Binding ValueTemplate}" Width="180"/>
+                                    <DataGridCheckBoxColumn Header="Literal" Binding="{Binding IsLiteral}" Width="55"/>
+                                    <DataGridTemplateColumn Width="75">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="Dene" Tag="loc:btn_test_row" FontSize="10" Padding="4,2" Margin="2" Click="TestMappingRowBtn_Click" Style="{StaticResource ClassicButton}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </GroupBox>
+
+                        <DockPanel Grid.Row="1" Margin="4,4,4,4">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Create Config" Tag="loc:btn_create_config" Click="ConfigSaveBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
+                                <Button Content="Load Config" Tag="loc:btn_load_config" Click="ConfigLoadBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
+                                <Button Content="Test" Tag="loc:btn_test" Click="TaskTestXPathBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="4,0,0,2"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Task:" Tag="loc:lbl_task_label" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Margin="0,0,4,2"/>
+                                <ComboBox x:Name="TasksCombo" Width="180" FontSize="11" DisplayMemberPath="Name"
+                                          SelectionChanged="TasksCombo_SelectionChanged" Margin="0,0,8,2"
+                                          materialDesign:HintAssist.Hint="Kayıtlı Görev Seçin..."/>
+                                <TextBox x:Name="TaskName" Width="160" FontSize="11" Margin="0,0,8,2"
+                                         materialDesign:HintAssist.Hint="Task name"/>
+                                <Button Content="New" Tag="loc:btn_new" Click="AddTaskBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
+                                <Button Content="Delete" Tag="loc:btn_delete" Click="DeleteTaskBtn_Click"
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
+                                <Button Content="Save Task" Tag="loc:btn_save_task" Click="SaveTaskBtn_Click"
+                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"/>
+                                <Button Content="Save Mappings" Tag="loc:btn_save_mappings" Click="SaveMappingsBtn_Click"
+                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- ==================== TAB 2: TASK SETTINGS ==================== -->
+            <TabItem Header="Task Settings" Tag="loc:tab_task_settings">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="4">
+                    <StackPanel MaxWidth="600">
+                        <GroupBox Header="Folder Paths" Tag="loc:grp_folder_paths" Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="File name prefix (appended to output file name)"
+                                           Tag="loc:lbl_prepend" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskPrependToFileName" FontSize="11" Margin="0,0,0,8"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Document Structure" Tag="loc:grp_doc_structure" Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="XPath for repeating records (e.g. //item)"
+                                           Tag="loc:lbl_multi_xpath" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskMultiRecordXPath" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Expression to remove after record"
+                                           Tag="loc:lbl_text_remove" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskTextToRemove" FontSize="11" Margin="0,0,0,8"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <GroupBox Header="Advanced Connection" Tag="loc:grp_adv_connection" Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <CheckBox x:Name="TaskUseConnectionString" Content="Use manual connection string"
+                                          Tag="loc:chk_manual_conn" FontSize="11" Margin="0,0,0,4"
+                                          Checked="TaskUseConnectionString_Changed"
+                                          Unchecked="TaskUseConnectionString_Changed"/>
+                                <TextBox x:Name="TaskConnectionString" FontSize="11"
+                                         Visibility="Collapsed" Margin="0,0,0,8"/>
+                                <TextBlock Text="Target table (e.g. dbo.ScanDetail)"
+                                           Tag="loc:lbl_target_table" Style="{StaticResource FieldLabel}"/>
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <materialDesign:PackIcon Grid.Column="0" Kind="Server" Width="36" Height="36"
-                                                             VerticalAlignment="Center" Margin="0,0,20,0" Foreground="#6366F1"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="AdmXmlDbWorker Servisi" FontWeight="SemiBold" FontSize="16" Foreground="#F8FAFC"/>
-                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                            <Ellipse x:Name="StatusIndicator" Width="10" Height="10" Margin="0,0,10,0"
-                                                     VerticalAlignment="Center" Fill="Gray"/>
-                                            <TextBlock x:Name="ServiceStatusText" Text="Kontrol ediliyor..." VerticalAlignment="Center" Foreground="#94A3B8" FontSize="14"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    <Button x:Name="RefreshStatusBtn" Grid.Column="2" Content="Yenile"
-                                            Click="RefreshStatusBtn_Click"
-                                            Style="{StaticResource VisibleOutlinedButton}"/>
+                                    <TextBox x:Name="TaskTableName" FontSize="11" Margin="0,0,4,0"/>
+                                    <Button Grid.Column="1" Content="Get Columns" Tag="loc:btn_get_columns"
+                                            Click="TaskGetColumnsBtn_Click" Style="{StaticResource ClassicButton}"/>
                                 </Grid>
-                            </Border>
-
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
-                                <Button x:Name="RefreshLogsBtn" Content="Logları Yenile" Click="RefreshLogsBtn_Click"
-                                        Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,12,0"/>
-                                <Button x:Name="CleanLogsBtn" Content="Eski Logları Temizle (90 gün)" Click="CleanLogsBtn_Click"
-                                        Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,12,0"/>
-                                <TextBlock x:Name="LogPageInfo" Text="Sayfa 1" VerticalAlignment="Center" Margin="16,0,0,0"
-                                           FontWeight="Medium" Foreground="#94A3B8" FontSize="14"/>
-                                <Button x:Name="LogPrevBtn" Content="Önceki" Click="LogPrevBtn_Click"
-                                        Style="{StaticResource VisibleTextButton}" Margin="12,0,0,0"/>
-                                <Button x:Name="LogNextBtn" Content="Sonraki" Click="LogNextBtn_Click"
-                                        Style="{StaticResource VisibleTextButton}" Margin="4,0,0,0"/>
+                                <ListBox x:Name="TaskColumnsList" FontSize="11" MaxHeight="100"
+                                         BorderBrush="#ACACAC" BorderThickness="1"/>
                             </StackPanel>
+                        </GroupBox>
 
-                            <Border Grid.Row="2" Padding="0" Background="#334155" BorderBrush="#475569"
-                                    BorderThickness="1" CornerRadius="12">
-                                <DataGrid x:Name="LogsGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                                          HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
-                                          Style="{StaticResource MaterialDesignDataGrid}"
-                                          Background="Transparent" BorderThickness="0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Task" Binding="{Binding TaskName}" Width="*"/>
-                                        <DataGridTextColumn Header="Filename" Binding="{Binding Filename}" Width="*"/>
-                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
-                                        <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="140"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Border>
-                        </Grid>
-                    </TabItem>
-
-                    <TabItem Header="General Settings">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="24">
-                            <Border MaxWidth="500" Padding="28" Background="#334155" BorderBrush="#475569"
-                                    BorderThickness="1" CornerRadius="12">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,28">
-                                        <materialDesign:PackIcon Kind="Email" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#6366F1"/>
-                                        <TextBlock Text="SMTP Ayarları" FontWeight="SemiBold" FontSize="17" Foreground="#F8FAFC"/>
-                                        <TextBlock Text=" — Hata bildirimleri için" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                    </StackPanel>
-                                    <TextBox x:Name="SmtpHost" materialDesign:HintAssist.Hint="SMTP sunucu adresi" Margin="0,0,0,16"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                    <TextBox x:Name="SmtpPort" materialDesign:HintAssist.Hint="Port (örn: 587)" Text="587" Margin="0,0,0,16"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                    <CheckBox x:Name="SmtpUseSsl" Content="SSL kullan" Margin="0,0,0,16"
-                                              Style="{StaticResource MaterialDesignCheckBox}"/>
-                                    <TextBox x:Name="SmtpUsername" materialDesign:HintAssist.Hint="Kullanıcı adı" Margin="0,0,0,16"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                    <PasswordBox x:Name="SmtpPassword" materialDesign:HintAssist.Hint="Şifre" Margin="0,0,0,16"
-                                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}"/>
-                                    <TextBox x:Name="SmtpSender" materialDesign:HintAssist.Hint="Gönderen e-posta" Margin="0,0,0,24"
-                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button x:Name="SaveSmtpBtn" Content="Kaydet" Click="SaveSmtpBtn_Click"
-                                                Style="{StaticResource PrimaryActionButton}" Margin="0,0,12,0"/>
-                                        <Button x:Name="TestSmtpBtn" Content="Bağlantıyı Test Et" Click="TestSmtpBtn_Click"
-                                                Style="{StaticResource VisibleOutlinedButton}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </ScrollViewer>
-                    </TabItem>
-
-                    <TabItem Header="Task Management">
-                        <Grid Margin="24">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="300"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Sol: Görev Listesi -->
-                            <Border Grid.Row="0" Grid.Column="0" Padding="20" Margin="0,0,20,0" Background="#334155"
-                                    BorderBrush="#475569" BorderThickness="1" CornerRadius="12">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-                                        <materialDesign:PackIcon Kind="FormatListBulleted" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#6366F1"/>
-                                        <TextBlock Text="Görevler" FontWeight="SemiBold" FontSize="16" Foreground="#F8FAFC" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                    <Border Grid.Row="1" Background="#1E293B" CornerRadius="8" Padding="12" Margin="0,0,0,16"
-                                            MinHeight="120">
-                                        <ListBox x:Name="TasksList" DisplayMemberPath="Name"
-                                                 SelectionChanged="TasksList_SelectionChanged"
-                                                 BorderThickness="0" Background="Transparent"
-                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
-                                    </Border>
-                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
-                                        <Button x:Name="AddTaskBtn" Click="AddTaskBtn_Click"
-                                                Style="{StaticResource PrimaryActionButton}" Margin="0,0,10,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <materialDesign:PackIcon Kind="Plus" Width="20" Height="20" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Yeni Görev" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="14"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button x:Name="DeleteTaskBtn" Click="DeleteTaskBtn_Click"
-                                                Style="{StaticResource VisibleOutlinedButton}"
-                                                ToolTip="Seçili görevi sil">
-                                            <materialDesign:PackIcon Kind="Delete" Width="20" Height="20"/>
-                                        </Button>
+                        <GroupBox Header="Target Directory" Tag="loc:grp_target_dir" Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="Static base directory" Tag="loc:lbl_static_base"
+                                           Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskStaticTargetDir" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Dynamic target path components" Tag="loc:lbl_dynamic_comp"
+                                           Style="{StaticResource FieldLabel}"/>
+                                <ListBox x:Name="TargetDirComponentsList" DisplayMemberPath="DisplayValue"
+                                         FontSize="11" MaxHeight="80" BorderBrush="#ACACAC" BorderThickness="1"
+                                         Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TargetDirStaticInput" FontSize="11" Margin="0,0,4,0"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="Add XPath" Tag="loc:btn_add_xpath" Click="TargetDirAddXPath_Click"
+                                                Style="{StaticResource ClassicButton}" Margin="0,0,4,0"/>
+                                        <Button Content="Add Static" Tag="loc:btn_add_static" Click="TargetDirAddStatic_Click"
+                                                Style="{StaticResource ClassicButton}" Margin="0,0,4,0"/>
+                                        <Button Content="Remove" Tag="loc:btn_remove" Click="TargetDirRemove_Click"
+                                                Style="{StaticResource ClassicButton}"/>
                                     </StackPanel>
                                 </Grid>
-                            </Border>
-
-                            <!-- Sağ: Görev Ayarları + Örnek XML yan yana -->
-                            <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" MinWidth="400"/>
-                                    <ColumnDefinition Width="*" MinWidth="320"/>
-                                </Grid.ColumnDefinitions>
-                                <!-- Sol: Görev Ayarları -->
-                                <Border Grid.Column="0" Padding="24" Margin="0,0,12,0" Background="#334155"
-                                        BorderBrush="#475569" BorderThickness="1" CornerRadius="12">
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <StackPanel MaxWidth="560">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                                            <materialDesign:PackIcon Kind="Cog" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#6366F1"/>
-                                            <TextBlock Text="Görev Ayarları" FontWeight="SemiBold" FontSize="16" Foreground="#F8FAFC" VerticalAlignment="Center"/>
-                                        </StackPanel>
-
-                                        <TextBox x:Name="TaskName" materialDesign:HintAssist.Hint="Görev adı" Margin="0,0,0,20"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}" FontSize="14"/>
-
-                                        <!-- Klasör Yolları -->
-                                        <Border Style="{StaticResource SectionGroup}">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                                    <materialDesign:PackIcon Kind="Folder" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                                    <TextBlock Text="Klasör Yolları" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC"/>
-                                                </StackPanel>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskInputPath" IsReadOnly="True" Margin="0,0,10,0"
-                                                             materialDesign:HintAssist.Hint="XML giriş klasörü"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <Button Grid.Column="1" Click="BrowseInputPath_Click"
-                                                            Style="{StaticResource VisibleOutlinedButton}">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="Seç" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                </Grid>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskOutputPath" IsReadOnly="True" Margin="0,0,10,0"
-                                                             materialDesign:HintAssist.Hint="İşlenmiş dosya çıkış klasörü"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <Button Grid.Column="1" Click="BrowseOutputPath_Click"
-                                                            Style="{StaticResource VisibleOutlinedButton}">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="Seç" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                </Grid>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskErrorPath" IsReadOnly="True" Margin="0,0,10,0"
-                                                             materialDesign:HintAssist.Hint="Hata dosyaları klasörü"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <Button Grid.Column="1" Click="BrowseErrorPath_Click"
-                                                            Style="{StaticResource VisibleOutlinedButton}">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center"/>
-                                                            <TextBlock Text="Seç" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                </Grid>
-                                                <TextBox x:Name="TaskPrependToFileName" materialDesign:HintAssist.Hint="Dosya ön eki (çıktı dosya adına eklenir)" Margin="0,12,0,0"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Veritabanı Ayarları -->
-                                        <Border Style="{StaticResource SectionGroup}">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                                    <materialDesign:PackIcon Kind="Database" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                                    <TextBlock Text="Veritabanı Ayarları" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC"/>
-                                                </StackPanel>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskDbHost" materialDesign:HintAssist.Hint="Hostname veya IP" Margin="0,0,8,0"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <TextBox x:Name="TaskDbName" Grid.Column="1" materialDesign:HintAssist.Hint="Veritabanı adı"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                </Grid>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskDbUser" materialDesign:HintAssist.Hint="Kullanıcı adı (boş=Windows Auth)" Margin="0,0,8,0"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <PasswordBox x:Name="TaskDbPassword" Grid.Column="1" materialDesign:HintAssist.Hint="Şifre"
-                                                                 Style="{StaticResource MaterialDesignOutlinedPasswordBox}"/>
-                                                </Grid>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                                    <Button x:Name="TaskDbConnectBtn" Content="Bağlan" Click="TaskDbConnectBtn_Click"
-                                                            Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,12,0"/>
-                                                    <CheckBox x:Name="TaskUseConnectionString" Content="Gelişmiş (manuel bağlantı dizesi)" VerticalAlignment="Center"
-                                                              Style="{StaticResource MaterialDesignCheckBox}" Checked="TaskUseConnectionString_Changed" Unchecked="TaskUseConnectionString_Changed"/>
-                                                </StackPanel>
-                                                <Border x:Name="TaskConnectionStringPanel" Visibility="Collapsed" Margin="0,0,0,12">
-                                                    <TextBox x:Name="TaskConnectionString" materialDesign:HintAssist.Hint="Bağlantı dizesi"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                </Border>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TaskTableName" materialDesign:HintAssist.Hint="Hedef tablo (örn: ext.T_SO_DocumentExport)" Margin="0,0,10,0"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <Button Grid.Column="1" x:Name="TaskGetColumnsBtn" Content="Kolonları Getir" Click="TaskGetColumnsBtn_Click"
-                                                            Style="{StaticResource VisibleOutlinedButton}"/>
-                                                </Grid>
-                                                <Border Background="#1E293B" CornerRadius="8" Padding="12" MaxHeight="120">
-                                                    <ListBox x:Name="TaskColumnsList" BorderThickness="0" Background="Transparent"
-                                                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Doküman Yapısı -->
-                                        <Border Style="{StaticResource SectionGroup}">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                                    <materialDesign:PackIcon Kind="FileDocumentOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                                    <TextBlock Text="Doküman Yapısı" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC"/>
-                                                </StackPanel>
-                                                <CheckBox x:Name="TaskMultiRecord" Content="Dokümanda birden fazla kayıt var" Margin="0,0,0,12"
-                                                          Style="{StaticResource MaterialDesignCheckBox}"/>
-                                                <TextBox x:Name="TaskMultiRecordXPath" materialDesign:HintAssist.Hint="Tekrarlanan kayıt için XPath (örn: //item)" Margin="0,0,0,12"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                <TextBox x:Name="TaskTextToRemove" materialDesign:HintAssist.Hint="Kayıt sonrası kaldırılacak ifade" Margin="0,0,0,12"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                <Button x:Name="TaskTestXPathBtn" Content="XPath Test" Click="TaskTestXPathBtn_Click"
-                                                        Style="{StaticResource VisibleOutlinedButton}" HorizontalAlignment="Left"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Hedef Dizin Yapısı -->
-                                        <Border Style="{StaticResource SectionGroup}">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                                    <materialDesign:PackIcon Kind="FolderOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                                    <TextBlock Text="Hedef Dizin Yapısı" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC"/>
-                                                </StackPanel>
-                                                <TextBox x:Name="TaskStaticTargetDir" materialDesign:HintAssist.Hint="Statik temel dizin (örn: C:\archive)" Margin="0,0,0,12"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                <TextBlock Text="Dinamik hedef yolu için XPath veya statik bileşenler (sıralı)" Foreground="#94A3B8" FontSize="12" Margin="0,0,0,8"/>
-                                                <Border Background="#1E293B" CornerRadius="8" Padding="12" MaxHeight="100" Margin="0,0,0,12">
-                                                    <ListBox x:Name="TargetDirComponentsList" DisplayMemberPath="DisplayValue" BorderThickness="0" Background="Transparent"/>
-                                                </Border>
-                                                <Grid Margin="0,0,0,12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="TargetDirStaticInput" materialDesign:HintAssist.Hint="Statik Dizin veya XPath" Margin="0,0,8,0"
-                                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                        <Button Content="XPath Ekle" Click="TargetDirAddXPath_Click" Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,8,0"/>
-                                                        <Button Content="Statik Ekle" Click="TargetDirAddStatic_Click" Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,8,0"/>
-                                                        <Button Content="Sil" Click="TargetDirRemove_Click" Style="{StaticResource VisibleOutlinedButton}"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Button Content="Yukarı" Click="TargetDirMoveUp_Click" Style="{StaticResource VisibleTextButton}" Margin="0,0,8,0"/>
-                                                    <Button Content="Aşağı" Click="TargetDirMoveDown_Click" Style="{StaticResource VisibleTextButton}"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Zamanlama ve Bildirimler -->
-                                        <Border Style="{StaticResource SectionGroup}">
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                                    <materialDesign:PackIcon Kind="Clock" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                                    <TextBlock Text="Zamanlama ve Bildirimler" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC"/>
-                                                </StackPanel>
-                                                <TextBox x:Name="TaskCronExpression" materialDesign:HintAssist.Hint="Cron ifadesi (örn: 0 0 * * * ? = her saat)" Margin="0,0,0,12"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                <TextBox x:Name="TaskErrorEmails" materialDesign:HintAssist.Hint="Hata e-postaları (noktalı virgülle ayırın)" Margin="0,0,0,16"
-                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                                                <CheckBox x:Name="TaskIsEnabled" Content="Görev etkin" IsChecked="True"
-                                                          Style="{StaticResource MaterialDesignCheckBox}"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <StackPanel Orientation="Horizontal">
-                                            <Button x:Name="SaveTaskBtn" Click="SaveTaskBtn_Click"
-                                                    Style="{StaticResource PrimaryActionButton}" Margin="0,0,12,0">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <materialDesign:PackIcon Kind="ContentSave" Width="20" Height="20" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Görevi Kaydet" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="14"/>
-                                                </StackPanel>
-                                            </Button>
-                                            <Button x:Name="ConfigSaveBtn" Content="Config Kaydet" Click="ConfigSaveBtn_Click"
-                                                    Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,8,0"/>
-                                            <Button x:Name="ConfigLoadBtn" Content="Config Yükle" Click="ConfigLoadBtn_Click"
-                                                    Style="{StaticResource VisibleOutlinedButton}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Border>
-
-                                <!-- Sağ: Örnek XML -->
-                                <Border Grid.Column="1" Padding="20" Margin="12,0,0,0" Background="#334155"
-                                        BorderBrush="#475569" BorderThickness="1" CornerRadius="12">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                                            <materialDesign:PackIcon Kind="FileDocument" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                            <TextBlock Text="Örnek XML" FontWeight="SemiBold" FontSize="14" Foreground="#F8FAFC" VerticalAlignment="Center"/>
-                                            <TextBlock Text=" — Yapıyı referans alın" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Row="1" Orientation="Vertical">
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                <Button x:Name="LoadSampleXmlBtn" Click="LoadSampleXmlBtn_Click"
-                                                        Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,8,0">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <materialDesign:PackIcon Kind="Upload" Width="16" Height="16" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="Örnek XML Yükle" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </Button>
-                                                <Button x:Name="ClearSampleXmlBtn" Click="ClearSampleXmlBtn_Click"
-                                                        Style="{StaticResource VisibleTextButton}"
-                                                        Content="Temizle"/>
-                                            </StackPanel>
-                                            <TextBox x:Name="SampleXmlPreview" IsReadOnly="True" TextWrapping="NoWrap"
-                                                     AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                                     FontFamily="Consolas" FontSize="11" Padding="8" MinHeight="200"
-                                                     materialDesign:HintAssist.Hint="Örnek XML yükleyin — yapıyı görüp XPath eşleştirmeleri oluşturabilirsiniz"
-                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                                     Background="#1E293B" BorderThickness="0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-
-                            <!-- Data Mappings -->
-                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Padding="24" Background="#334155"
-                                    BorderBrush="#475569" BorderThickness="1" CornerRadius="12">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-                                        <materialDesign:PackIcon Kind="Table" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#6366F1"/>
-                                        <TextBlock Text="Veri Eşleştirmeleri" FontWeight="SemiBold" FontSize="16" Foreground="#F8FAFC"/>
-                                        <TextBlock Text=" — XPath → Sütun → SQL tipi" FontSize="13" Foreground="#94A3B8" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                    </StackPanel>
-                                    <Border Grid.Row="1" Background="#1E293B" CornerRadius="8" Padding="0" Margin="0,0,0,16" MinHeight="100">
-                                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                            <DataGrid x:Name="MappingsGrid" MinWidth="950" AutoGenerateColumns="False"
-                                                      CanUserAddRows="True" CanUserDeleteRows="True" HeadersVisibility="Column"
-                                                      HorizontalScrollBarVisibility="Auto" CanUserResizeColumns="True"
-                                                      Style="{StaticResource MaterialDesignDataGrid}"
-                                                      Background="Transparent" BorderThickness="0">
-                                                <DataGrid.Columns>
-                                                    <DataGridTextColumn Header="XPath" Binding="{Binding XPath}" MinWidth="280" Width="2*"/>
-                                                    <DataGridTextColumn Header="Sütun" Binding="{Binding ColumnName}" MinWidth="150" Width="*"/>
-                                                    <DataGridComboBoxColumn Header="SQL Tipi" MinWidth="110" Width="110"
-                                                                           SelectedItemBinding="{Binding SqlDataType}"
-                                                                           ItemsSource="{Binding Source={StaticResource SqlTypeEnum}}"/>
-                                                    <DataGridTextColumn Header="Varsayılan" Binding="{Binding DefaultValue}" MinWidth="110" Width="110"/>
-                                                    <DataGridTextColumn Header="Değer Şablonu" Binding="{Binding ValueTemplate}" MinWidth="200" Width="200"
-                                                                        ToolTipService.ToolTip="Birden fazla XPath birleştirme: {//XPath1}-{//XPath2} veya {//XPath} SABİT"/>
-                                                    <DataGridCheckBoxColumn Header="Sabit" Binding="{Binding IsLiteral}" MinWidth="110" Width="110"/>
-                                                    <DataGridTextColumn Header="Bulunacak" Binding="{Binding FindValue}" MinWidth="110" Width="110"/>
-                                                    <DataGridTextColumn Header="Yerine" Binding="{Binding ReplaceValue}" MinWidth="110" Width="110"/>
-                                                </DataGrid.Columns>
-                                            </DataGrid>
-                                        </ScrollViewer>
-                                    </Border>
-                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
-                                        <Button x:Name="AddMappingBtn" Click="AddMappingBtn_Click"
-                                                Style="{StaticResource VisibleOutlinedButton}" Margin="0,0,12,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Eşleme Ekle" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button x:Name="MappingMoveUpBtn" Click="MappingMoveUpBtn_Click"
-                                                Style="{StaticResource VisibleTextButton}" Margin="0,0,8,0" Content="Yukarı"/>
-                                        <Button x:Name="MappingMoveDownBtn" Click="MappingMoveDownBtn_Click"
-                                                Style="{StaticResource VisibleTextButton}" Margin="0,0,12,0" Content="Aşağı"/>
-                                        <Button x:Name="SaveMappingsBtn" Click="SaveMappingsBtn_Click"
-                                                Style="{StaticResource PrimaryActionButton}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <materialDesign:PackIcon Kind="ContentSave" Width="18" Height="18" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Eşleştirmeleri Kaydet" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </TabItem>
-
-                    <TabItem Header="Simulation">
-                        <Grid Margin="24">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0" Padding="20" Margin="0,0,0,20" Background="#334155" BorderBrush="#475569"
-                                    BorderThickness="1" CornerRadius="12">
                                 <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="LoadXmlBtn" Click="LoadXmlBtn_Click"
-                                            Style="{StaticResource PrimaryActionButton}" Margin="0,0,16,0">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="FileDocument" Width="22" Height="22" VerticalAlignment="Center"/>
-                                            <TextBlock Text="XML Yükle" Margin="10,0,0,0" VerticalAlignment="Center" FontSize="14"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <ComboBox x:Name="SimTaskCombo" DisplayMemberPath="Name" Width="260" Margin="0,0,16,0"
-                                              materialDesign:HintAssist.Hint="Eşleştirme için görev seçin"
-                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                              SelectionChanged="SimTaskCombo_SelectionChanged"/>
-                                    <TextBlock Text="XPath eşleştirmeleri için bir görev seçin" VerticalAlignment="Center" Foreground="#94A3B8" FontSize="13"/>
+                                    <Button Content="Up" Tag="loc:btn_move_up" Click="TargetDirMoveUp_Click"
+                                            Style="{StaticResource VisibleTextButton}" Margin="0,0,4,0"/>
+                                    <Button Content="Down" Tag="loc:btn_move_down" Click="TargetDirMoveDown_Click"
+                                            Style="{StaticResource VisibleTextButton}"/>
                                 </StackPanel>
-                            </Border>
-
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
-                                <materialDesign:PackIcon Kind="Table" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                <TextBlock Text="Ayrıştırılmış Veri" FontWeight="SemiBold" FontSize="15" Foreground="#F8FAFC"/>
                             </StackPanel>
-                            <Border Grid.Row="2" Padding="0" Margin="0,0,0,20" Background="#334155" BorderBrush="#475569"
-                                    BorderThickness="1" CornerRadius="12">
-                                <DataGrid x:Name="ParsedDataGrid" AutoGenerateColumns="True" IsReadOnly="True"
-                                          HeadersVisibility="Column" CanUserAddRows="False" MinHeight="120"
-                                          Style="{StaticResource MaterialDesignDataGrid}"
-                                          Background="Transparent" BorderThickness="0"/>
-                            </Border>
+                        </GroupBox>
 
-                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,12">
-                                <materialDesign:PackIcon Kind="Database" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6366F1"/>
-                                <TextBlock Text="Üretilen SQL" FontWeight="SemiBold" FontSize="15" Foreground="#F8FAFC" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                                <Button x:Name="DryRunBtn" Click="DryRunBtn_Click"
-                                        Style="{StaticResource PrimaryActionButton}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="Play" Width="18" Height="18" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Dry Run (Test)" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
+                        <GroupBox Header="Scheduling &amp; Notifications" Tag="loc:grp_scheduling"
+                                  Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="Cron expression (e.g. 0 0 * * * ?)" Tag="loc:lbl_cron"
+                                           Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskCronExpression" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Error emails (separate with semicolons)" Tag="loc:lbl_error_emails"
+                                           Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskErrorEmails" FontSize="11" Margin="0,0,0,8"/>
+                                <CheckBox x:Name="TaskIsEnabled" Content="Task enabled" Tag="loc:chk_task_enabled"
+                                          IsChecked="True" FontSize="11"/>
                             </StackPanel>
-                            <Border Grid.Row="4" Background="#1E293B" CornerRadius="10" Padding="16">
-                                <TextBox x:Name="SqlOutput" IsReadOnly="True" TextWrapping="Wrap"
-                                         VerticalScrollBarVisibility="Auto" MinHeight="160"
-                                         FontFamily="Consolas" FontSize="12" Padding="12"
-                                         materialDesign:HintAssist.Hint="SQL çıktısı ve Dry Run sonucu burada görünür"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Background="Transparent" BorderThickness="0"/>
-                            </Border>
-                        </Grid>
-                    </TabItem>
-    </TabControl>
-    </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ==================== TAB 3: DASHBOARD ==================== -->
+            <TabItem Header="Dashboard" Tag="loc:tab_dashboard">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <GroupBox Grid.Row="0" Header="AdmXmlDbWorker Service" Tag="loc:grp_service"
+                              Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="StatusIndicator" Width="10" Height="10" Margin="0,0,8,0"
+                                     VerticalAlignment="Center" Fill="Gray"/>
+                            <TextBlock x:Name="ServiceStatusText" Text="Checking..." VerticalAlignment="Center"
+                                       FontSize="12" Margin="0,0,16,0"/>
+                            <Button x:Name="RefreshStatusBtn" Content="Refresh" Tag="loc:btn_refresh"
+                                    Click="RefreshStatusBtn_Click" Style="{StaticResource ClassicButton}"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button x:Name="RefreshLogsBtn" Content="Refresh Logs" Tag="loc:btn_refresh_logs"
+                                Click="RefreshLogsBtn_Click"
+                                Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
+                        <Button x:Name="CleanLogsBtn" Content="Clean Old Logs (90 days)" Tag="loc:btn_clean_logs"
+                                Click="CleanLogsBtn_Click"
+                                Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="LogPageInfo" Text="Page 1" VerticalAlignment="Center" FontSize="11" Margin="12,0,0,0"/>
+                        <Button x:Name="LogPrevBtn" Content="Previous" Tag="loc:btn_prev"
+                                Click="LogPrevBtn_Click"
+                                Style="{StaticResource VisibleTextButton}" Margin="8,0,0,0"/>
+                        <Button x:Name="LogNextBtn" Content="Next" Tag="loc:btn_next"
+                                Click="LogNextBtn_Click"
+                                Style="{StaticResource VisibleTextButton}" Margin="4,0,0,0"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="2" x:Name="LogsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
+                              FontSize="11" Background="White" BorderBrush="#ACACAC" BorderThickness="1"
+                              GridLinesVisibility="All" HorizontalGridLinesBrush="#D0D0D0" VerticalGridLinesBrush="#D0D0D0"
+                              AlternatingRowBackground="#F7F7F7" RowBackground="White">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Task" Binding="{Binding TaskName}" Width="*"/>
+                            <DataGridTextColumn Header="Filename" Binding="{Binding Filename}" Width="*"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                            <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="140"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <!-- ==================== TAB 4: GENERAL SETTINGS ==================== -->
+            <TabItem Header="General Settings" Tag="loc:tab_general_settings">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel HorizontalAlignment="Center" MaxWidth="450">
+                        <GroupBox Header="SMTP Settings (Error Notifications)" Tag="loc:grp_smtp"
+                                  Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="SMTP Host" Tag="loc:lbl_smtp_host" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpHost" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Port" Tag="loc:lbl_port" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpPort" Text="587" FontSize="11" Margin="0,0,0,8"/>
+                                <CheckBox x:Name="SmtpUseSsl" Content="Use SSL" Tag="loc:chk_use_ssl"
+                                          FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Username" Tag="loc:lbl_smtp_username" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpUsername" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Password" Tag="loc:lbl_smtp_password" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="SmtpPassword" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Sender Email" Tag="loc:lbl_sender" Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="SmtpSender" FontSize="11" Margin="0,0,0,12"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="SaveSmtpBtn" Content="Save" Tag="loc:btn_save"
+                                            Click="SaveSmtpBtn_Click"
+                                            Style="{StaticResource PrimaryActionButton}" Margin="0,0,8,0"/>
+                                    <Button x:Name="TestSmtpBtn" Content="Test Connection" Tag="loc:btn_test_conn"
+                                            Click="TestSmtpBtn_Click"
+                                            Style="{StaticResource ClassicButton}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ==================== TAB 5: SIMULATION ==================== -->
+            <TabItem Header="Simulation" Tag="loc:tab_simulation">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <GroupBox Grid.Row="0" Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="LoadXmlBtn" Content="Load XML" Tag="loc:btn_sim_load_xml"
+                                    Click="LoadXmlBtn_Click"
+                                    Style="{StaticResource PrimaryActionButton}" Margin="0,0,12,0"/>
+                            <ComboBox x:Name="SimTaskCombo" DisplayMemberPath="Name" Width="240" FontSize="11"
+                                      SelectionChanged="SimTaskCombo_SelectionChanged" Margin="0,0,12,0"/>
+                            <TextBlock Text="Select a task for XPath mappings" Tag="loc:lbl_select_task"
+                                       VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <TextBlock Grid.Row="1" Text="Parsed Data" Tag="loc:lbl_parsed_data"
+                               FontWeight="SemiBold" FontSize="12" Margin="4,0,0,4"/>
+
+                    <DataGrid Grid.Row="2" x:Name="ParsedDataGrid" AutoGenerateColumns="True" IsReadOnly="True"
+                              HeadersVisibility="Column" CanUserAddRows="False" FontSize="11"
+                              Background="White" BorderBrush="#ACACAC" BorderThickness="1"
+                              GridLinesVisibility="All" HorizontalGridLinesBrush="#D0D0D0" VerticalGridLinesBrush="#D0D0D0"
+                              AlternatingRowBackground="#F7F7F7" RowBackground="White" Margin="0,0,0,8"/>
+
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="4,0,0,4">
+                        <TextBlock Text="Generated SQL" Tag="loc:lbl_gen_sql" FontWeight="SemiBold" FontSize="12"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button x:Name="DryRunBtn" Content="Dry Run (Test)" Tag="loc:btn_dry_run"
+                                Click="DryRunBtn_Click"
+                                Style="{StaticResource PrimaryActionButton}"/>
+                    </StackPanel>
+
+                    <TextBox Grid.Row="4" x:Name="SqlOutput" IsReadOnly="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11"
+                             Background="White" BorderBrush="#ACACAC" BorderThickness="1"/>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+    </DockPanel>
 </Window>

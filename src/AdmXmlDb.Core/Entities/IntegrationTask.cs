@@ -57,6 +57,17 @@ public class IntegrationTask
     [MaxLength(1000)]
     public string? StaticTargetDirectory { get; set; }
 
+    /// <summary>
+    /// Suffix appended to output file name.
+    /// </summary>
+    [MaxLength(200)]
+    public string? FileNameSuffix { get; set; }
+
+    /// <summary>
+    /// When true, current date-time is appended to the output file name.
+    /// </summary>
+    public bool AddDateTimeToFileName { get; set; }
+
     public ICollection<TaskMapping> Mappings { get; set; } = new List<TaskMapping>();
     public ICollection<TargetDirectoryComponent> TargetDirectoryComponents { get; set; } = new List<TargetDirectoryComponent>();
 }

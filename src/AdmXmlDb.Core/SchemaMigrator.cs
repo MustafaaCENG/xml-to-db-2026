@@ -43,13 +43,14 @@ public static class SchemaMigrator
 
     private static void AddIntegrationTaskColumns(SqliteConnection conn)
     {
-        var columns = new[] { "MultiRecordRootXPath", "TextToRemoveInXPath", "PrependToFileName", "StaticTargetDirectory" };
+        var columns = new[] { "MultiRecordRootXPath", "TextToRemoveInXPath", "PrependToFileName", "StaticTargetDirectory", "FileNameSuffix", "AddDateTimeToFileName" };
         foreach (var col in columns)
         {
             if (ColumnExists(conn, "Tasks", col))
                 continue;
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"ALTER TABLE Tasks ADD COLUMN {col} TEXT";
+            var sqlType = col == "AddDateTimeToFileName" ? "INTEGER NOT NULL DEFAULT 0" : "TEXT";
+            cmd.CommandText = $"ALTER TABLE Tasks ADD COLUMN {col} {sqlType}";
             try { cmd.ExecuteNonQuery(); } catch { /* column may exist */ }
         }
     }

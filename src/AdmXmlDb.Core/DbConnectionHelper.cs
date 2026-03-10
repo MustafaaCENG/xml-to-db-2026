@@ -80,6 +80,57 @@ public static class DbConnectionHelper
     }
 
     /// <summary>
+    /// Lists all user databases on the server.
+    /// </summary>
+    public static List<string> GetDatabases(string connectionString)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return result;
+
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT name FROM sys.databases WHERE database_id > 4 ORDER BY name";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                result.Add(r.GetString(0));
+        }
+        catch { }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Lists all tables (schema.table) in the current database.
+    /// </summary>
+    public static List<string> GetTables(string connectionString)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return result;
+
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"SELECT TABLE_SCHEMA + '.' + TABLE_NAME
+                                FROM INFORMATION_SCHEMA.TABLES
+                                WHERE TABLE_TYPE = 'BASE TABLE'
+                                ORDER BY TABLE_SCHEMA, TABLE_NAME";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                result.Add(r.GetString(0));
+        }
+        catch { }
+
+        return result;
+    }
+
+    /// <summary>
     /// Fetches column names and types from the specified table.
     /// Table name can include schema, e.g. ext.T_SO_DocumentExport.
     /// </summary>
