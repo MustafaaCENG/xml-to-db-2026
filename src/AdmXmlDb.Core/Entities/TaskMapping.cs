@@ -51,4 +51,11 @@ public class TaskMapping
     /// </summary>
     [MaxLength(1000)]
     public string? ValueTemplate { get; set; }
+
+    /// <summary>
+    /// Target table for this mapping. When empty, uses the task's default TableName.
+    /// Allows different mappings to write to different tables.
+    /// </summary>
+    [MaxLength(200)]
+    public string? TargetTableName { get; set; }
 }

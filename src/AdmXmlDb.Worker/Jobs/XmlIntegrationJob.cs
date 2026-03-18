@@ -48,9 +48,37 @@ public class XmlIntegrationJob : IJob
             return;
         }
 
+        // Establish UNC network share connection if credentials are configured
+        NetworkShareConnector? inputShare = null, outputShare = null, errorShare = null;
+        try
+        {
+            var netUser = task.NetworkUsername;
+            var netPass = DataProtectionHelper.Unprotect(task.EncryptedNetworkPassword);
+            if (!string.IsNullOrWhiteSpace(netUser))
+            {
+                inputShare = TryConnectShare(task.InputPath, netUser, netPass, task.Name);
+                outputShare = TryConnectShare(task.OutputPath, netUser, netPass, task.Name);
+                errorShare = TryConnectShare(task.ErrorPath, netUser, netPass, task.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Task {TaskName}: Could not connect to network shares. Will try anyway.", task.Name);
+        }
+
+        try
+        {
+
         if (!Directory.Exists(task.InputPath))
         {
-            _logger.LogWarning("Input path does not exist: {Path}", task.InputPath);
+            _logger.LogWarning("Input path does not exist or is not accessible: {Path}. " +
+                "If this is a UNC path, configure Network Credentials in Task Settings.", task.InputPath);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(task.OutputPath) || string.IsNullOrWhiteSpace(task.ErrorPath))
+        {
+            _logger.LogError("Task {TaskName}: OutputPath or ErrorPath is not configured.", task.Name);
             return;
         }
 
@@ -75,8 +103,29 @@ public class XmlIntegrationJob : IJob
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error processing {File}", xmlPath);
-                // Do not rethrow - continue with next file
             }
+        }
+
+        } // end try for UNC connections
+        finally
+        {
+            inputShare?.Dispose();
+            outputShare?.Dispose();
+            errorShare?.Dispose();
+        }
+    }
+
+    private NetworkShareConnector? TryConnectShare(string? path, string username, string password, string taskName)
+    {
+        if (!NetworkShareConnector.IsUncPath(path)) return null;
+        try
+        {
+            return NetworkShareConnector.Connect(path!, username, password);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Task {TaskName}: Could not connect to share {Share}", taskName, NetworkShareConnector.GetShareRoot(path!));
+            return null;
         }
     }
 
@@ -90,13 +139,26 @@ public class XmlIntegrationJob : IJob
         var fileName = Path.GetFileName(xmlPath);
         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".xml");
 
-        try
+        bool copySuccess = false;
+        Exception? lastCopyEx = null;
+        for (int i = 0; i < 3; i++)
         {
-            File.Copy(xmlPath, tempPath, overwrite: true);
+            try
+            {
+                File.Copy(xmlPath, tempPath, overwrite: true);
+                copySuccess = true;
+                break;
+            }
+            catch (Exception ex)
+            {
+                lastCopyEx = ex;
+                await Task.Delay(1000, ct); // File might be locked by an upstream transfer tool
+            }
         }
-        catch (Exception ex)
+
+        if (!copySuccess)
         {
-            _logger.LogError(ex, "Could not copy file {File} to temp", xmlPath);
+            _logger.LogError(lastCopyEx, "Task {TaskName}: Could not copy file {File} to temp after 3 attempts. It may still be locked.", task.Name, xmlPath);
             return;
         }
 
@@ -104,6 +166,11 @@ public class XmlIntegrationJob : IJob
         {
             var xmlContent = await File.ReadAllTextAsync(tempPath, ct);
             var allRows = XmlParser.ExtractAllRows(xmlContent, task);
+
+            // Group mappings by target table so we can split each row
+            var mappingsByTable = task.Mappings
+                .GroupBy(m => string.IsNullOrWhiteSpace(m.TargetTableName) ? task.TableName : m.TargetTableName.Trim())
+                .ToDictionary(g => g.Key, g => g.Select(m => m.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase));
 
             await using var conn = new SqlConnection(connectionString);
             await conn.OpenAsync(ct);
@@ -114,7 +181,14 @@ public class XmlIntegrationJob : IJob
                 var totalRows = 0;
                 foreach (var values in allRows)
                 {
-                    totalRows += await SqlInsertBuilder.ExecuteInsertAsync(conn, tran, task.TableName, values, ct);
+                    foreach (var (tableName, columns) in mappingsByTable)
+                    {
+                        var tableValues = values
+                            .Where(kvp => columns.Contains(kvp.Key))
+                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        if (tableValues.Count > 0)
+                            totalRows += await SqlInsertBuilder.ExecuteInsertAsync(conn, tran, tableName, tableValues, ct);
+                    }
                 }
                 await tran.CommitAsync(ct);
 
@@ -125,7 +199,7 @@ public class XmlIntegrationJob : IJob
                 {
                     var destPath = TargetPathBuilder.GetOutputFilePath(xmlContent, task, fileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-                    SafeMoveFile(xmlPath, destPath);
+                    SafeMoveFile(xmlPath, destPath, _logger);
                 }
                 catch (Exception moveEx)
                 {
@@ -136,7 +210,7 @@ public class XmlIntegrationJob : IJob
                         processedPath = GetUniqueFilePath(processedPath);
                         File.Move(xmlPath, processedPath);
                     }
-                    catch { /* best effort */ }
+                    catch (Exception procEx) { _logger.LogError(procEx, "Failed to append .processed suffix to {File}", xmlPath); }
                 }
             }
             catch (Exception ex)
@@ -145,24 +219,24 @@ public class XmlIntegrationJob : IJob
                 await LogExecutionAsync(db, task.Id, task.Name, fileName, "Failed", ex.ToString(), ct);
 
                 var errorPath = Path.Combine(task.ErrorPath, fileName);
-                SafeMoveFile(xmlPath, errorPath);
+                SafeMoveFile(xmlPath, errorPath, _logger);
 
-                await SendErrorNotificationAsync(db, task, fileName, ex, ct);
+                await SendErrorNotificationAsync(db, task, fileName, ex, _logger, ct);
             }
         }
         catch (XmlException ex)
         {
             await LogExecutionAsync(db, task.Id, task.Name, fileName, "Failed", ex.ToString(), ct);
             var errorPath = Path.Combine(task.ErrorPath, fileName);
-            SafeMoveFile(xmlPath, errorPath);
-            await SendErrorNotificationAsync(db, task, fileName, ex, ct);
+            SafeMoveFile(xmlPath, errorPath, _logger);
+            await SendErrorNotificationAsync(db, task, fileName, ex, _logger, ct);
         }
         catch (Exception ex)
         {
             await LogExecutionAsync(db, task.Id, task.Name, fileName, "Failed", ex.ToString(), ct);
             var errorPath = Path.Combine(task.ErrorPath, fileName);
-            SafeMoveFile(xmlPath, errorPath);
-            await SendErrorNotificationAsync(db, task, fileName, ex, ct);
+            SafeMoveFile(xmlPath, errorPath, _logger);
+            await SendErrorNotificationAsync(db, task, fileName, ex, _logger, ct);
         }
         finally
         {
@@ -210,21 +284,27 @@ public class XmlIntegrationJob : IJob
         return newPath;
     }
 
-    private static void SafeMoveFile(string source, string dest)
+    private static void SafeMoveFile(string source, string dest, ILogger logger)
     {
-        dest = GetUniqueFilePath(dest);
+        var finalDest = GetUniqueFilePath(dest);
         try
         {
-            File.Move(source, dest);
+            File.Move(source, finalDest);
+            logger.LogInformation("File successfully moved to {Dest}", finalDest);
         }
-        catch
+        catch (Exception moveEx)
         {
+            logger.LogWarning(moveEx, "File.Move failed from {Source} to {Dest}. Attempting Copy/Delete fallback.", source, finalDest);
             try
             {
-                File.Copy(source, dest, overwrite: true);
+                File.Copy(source, finalDest, overwrite: true);
                 File.Delete(source);
+                logger.LogInformation("File successfully copy-deleted to {Dest}", finalDest);
             }
-            catch { /* best effort */ }
+            catch (Exception fallbackEx)
+            {
+                logger.LogError(fallbackEx, "Fallback Copy/Delete also failed for {Source}.", source);
+            }
         }
     }
 
@@ -233,6 +313,7 @@ public class XmlIntegrationJob : IJob
         IntegrationTask task,
         string filename,
         Exception ex,
+        ILogger logger,
         CancellationToken ct)
     {
         var emails = task.ErrorEmails?
@@ -241,11 +322,17 @@ public class XmlIntegrationJob : IJob
             .ToArray() ?? [];
 
         if (emails.Length == 0)
+        {
+            logger.LogInformation("No error emails configured for task {TaskName}. Skipping email notification.", task.Name);
             return;
+        }
 
         var smtp = await db.SmtpSettings.FirstOrDefaultAsync(ct);
         if (smtp == null || string.IsNullOrEmpty(smtp.Host))
+        {
+            logger.LogWarning("SMTP settings are empty or missing. Cannot send error email.");
             return;
+        }
 
         var password = DataProtectionHelper.Unprotect(smtp.EncryptedPassword);
         try
@@ -267,11 +354,13 @@ public class XmlIntegrationJob : IJob
             foreach (var to in emails)
                 mail.To.Add(to);
 
+            logger.LogInformation("Attempting to send error email to {Count} recipients via {Host}:{Port}", emails.Length, smtp.Host, smtp.Port);
             await client.SendMailAsync(mail);
+            logger.LogInformation("Error email sent successfully.");
         }
-        catch
+        catch (Exception smtpEx)
         {
-            // Log but do not rethrow - SMTP failure should not crash the worker
+            logger.LogError(smtpEx, "SMTP email sending failed. Check SMTP configuration.");
         }
     }
 }

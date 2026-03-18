@@ -15,11 +15,21 @@ public static class DbConnectionHelper
         if (string.IsNullOrWhiteSpace(server))
             return "";
 
+        var serverTrimmed = server.Trim();
+        // Force TCP protocol to avoid Named Pipes failures when running as
+        // LocalSystem / NetworkService (Win32 error 53: "Network path not found").
+        if (!serverTrimmed.StartsWith("tcp:", StringComparison.OrdinalIgnoreCase) &&
+            !serverTrimmed.StartsWith("np:", StringComparison.OrdinalIgnoreCase))
+        {
+            serverTrimmed = $"tcp:{serverTrimmed}";
+        }
+
         var builder = new SqlConnectionStringBuilder
         {
-            DataSource = server.Trim(),
+            DataSource = serverTrimmed,
             InitialCatalog = string.IsNullOrWhiteSpace(database) ? "master" : database.Trim(),
-            TrustServerCertificate = true
+            TrustServerCertificate = true,
+            ConnectTimeout = 15
         };
 
         if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(password))

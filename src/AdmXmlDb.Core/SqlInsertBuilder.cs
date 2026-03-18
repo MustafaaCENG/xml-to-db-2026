@@ -12,6 +12,14 @@ public static class SqlInsertBuilder
     private static string EscapeSqlIdentifier(string name)
         => name.Replace("]", "]]");
 
+    private static string EscapeTableName(string tableName)
+    {
+        if (string.IsNullOrWhiteSpace(tableName)) return "";
+        var parts = tableName.Split('.');
+        var escapedParts = parts.Select(p => $"[{EscapeSqlIdentifier(p.Trim(' ', '[', ']'))}]");
+        return string.Join(".", escapedParts);
+    }
+
     /// <summary>
     /// Builds a parameterized INSERT statement string (for display/simulation).
     /// </summary>
@@ -20,10 +28,10 @@ public static class SqlInsertBuilder
         if (values.Count == 0)
             return string.Empty;
 
-        var escapedTable = EscapeSqlIdentifier(tableName);
+        var escapedTable = EscapeTableName(tableName);
         var columns = string.Join(", ", values.Keys.Select(c => $"[{EscapeSqlIdentifier(c)}]"));
-        var paramsList = string.Join(", ", values.Keys.Select(c => $"@{c}"));
-        return $"INSERT INTO [{escapedTable}] ({columns}) VALUES ({paramsList})";
+        var paramsList = string.Join(", ", values.Values.Select((_, i) => $"@p{i}"));
+        return $"INSERT INTO {escapedTable} ({columns}) VALUES ({paramsList})";
     }
 
     /// <summary>
@@ -37,11 +45,14 @@ public static class SqlInsertBuilder
         var sql = BuildInsertStatement(tableName, values);
         using var cmd = new SqlCommand(sql, connection, transaction);
 
-        foreach (var (columnName, value) in values)
+        int pIndex = 0;
+        foreach (var kvp in values)
         {
-            var param = cmd.Parameters.AddWithValue($"@{columnName}", value ?? DBNull.Value);
+            var value = kvp.Value;
+            var param = cmd.Parameters.AddWithValue($"@p{pIndex}", value ?? DBNull.Value);
             if (value != null && value != DBNull.Value)
                 param.SqlDbType = InferSqlDbType(value);
+            pIndex++;
         }
 
         return cmd.ExecuteNonQuery();
@@ -58,11 +69,14 @@ public static class SqlInsertBuilder
         var sql = BuildInsertStatement(tableName, values);
         await using var cmd = new SqlCommand(sql, connection, transaction);
 
-        foreach (var (columnName, value) in values)
+        int pIndex = 0;
+        foreach (var kvp in values)
         {
-            var param = cmd.Parameters.AddWithValue($"@{columnName}", value ?? DBNull.Value);
+            var value = kvp.Value;
+            var param = cmd.Parameters.AddWithValue($"@p{pIndex}", value ?? DBNull.Value);
             if (value != null && value != DBNull.Value)
                 param.SqlDbType = InferSqlDbType(value);
+            pIndex++;
         }
 
         return await cmd.ExecuteNonQueryAsync(ct);

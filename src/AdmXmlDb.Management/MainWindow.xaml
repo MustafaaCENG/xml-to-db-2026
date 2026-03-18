@@ -223,6 +223,7 @@
                                       BorderBrush="#ACACAC" BorderThickness="1">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Priority" Binding="{Binding SortOrder}" Width="55"/>
+                                    <DataGridTextColumn Header="Target Table" Binding="{Binding TargetTableName}" Width="130"/>
                                     <DataGridTextColumn Header="Column Name" Binding="{Binding ColumnName}" Width="120"/>
                                     <DataGridComboBoxColumn Header="Data Type" Width="90"
                                                            SelectedItemBinding="{Binding SqlDataType}"
@@ -233,10 +234,13 @@
                                     <DataGridTextColumn Header="XML Node Default Value" Binding="{Binding DefaultValue}" Width="140"/>
                                     <DataGridTextColumn Header="Value Template" Binding="{Binding ValueTemplate}" Width="180"/>
                                     <DataGridCheckBoxColumn Header="Literal" Binding="{Binding IsLiteral}" Width="55"/>
-                                    <DataGridTemplateColumn Width="75">
+                                    <DataGridTemplateColumn Width="90">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Button Content="Dene" Tag="loc:btn_test_row" FontSize="10" Padding="4,2" Margin="2" Click="TestMappingRowBtn_Click" Style="{StaticResource ClassicButton}"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Button Content="Dene" Tag="loc:btn_test_row" FontSize="10" Padding="4,2" Margin="2" Click="TestMappingRowBtn_Click" Style="{StaticResource ClassicButton}"/>
+                                                    <Button Content="Sil" Tag="loc:btn_delete" FontSize="10" Padding="4,2" Margin="2" Click="DeleteMappingRowBtn_Click" Style="{StaticResource ClassicButton}" Background="#ffebee" Foreground="#c62828" BorderBrush="#ef9a9a"/>
+                                                </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -255,10 +259,10 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Task:" Tag="loc:lbl_task_label" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Margin="0,0,4,2"/>
-                                <ComboBox x:Name="TasksCombo" Width="180" FontSize="11" DisplayMemberPath="Name"
+                                <ComboBox x:Name="TasksCombo" ToolTip="Select a task" Width="180" FontSize="11" DisplayMemberPath="Name"
                                           SelectionChanged="TasksCombo_SelectionChanged" Margin="0,0,8,2"
-                                          materialDesign:HintAssist.Hint="Kayıtlı Görev Seçin..."/>
-                                <TextBox x:Name="TaskName" Width="160" FontSize="11" Margin="0,0,8,2"
+                                          materialDesign:HintAssist.Hint="Select Saved Task..."/>
+                                <TextBox x:Name="TaskName" ToolTip="Task Name" Width="140" FontSize="11" Margin="0,0,8,2"
                                          materialDesign:HintAssist.Hint="Task name"/>
                                 <Button Content="New" Tag="loc:btn_new" Click="AddTaskBtn_Click"
                                         Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
@@ -278,6 +282,17 @@
             <TabItem Header="Task Settings" Tag="loc:tab_task_settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="4">
                     <StackPanel MaxWidth="600">
+                        <GroupBox Header="Select Task" Tag="loc:grp_select_task_settings" Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,4">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Task:" Tag="loc:lbl_task_label" VerticalAlignment="Center" FontSize="12"
+                                           FontWeight="Bold" Margin="0,0,8,0"/>
+                                <ComboBox x:Name="SettingsTasksCombo" Width="280" FontSize="11" DisplayMemberPath="Name"
+                                          SelectionChanged="SettingsTasksCombo_SelectionChanged"
+                                          materialDesign:HintAssist.Hint="Select Task..."/>
+                            </StackPanel>
+                        </GroupBox>
+
+                    <StackPanel x:Name="TaskSettingsContainer" IsEnabled="False">
                         <GroupBox Header="Folder Paths" Tag="loc:grp_folder_paths" Style="{StaticResource ClassicGroupBox}">
                             <StackPanel>
                                 <TextBlock Text="File name prefix (appended to output file name)"
@@ -286,46 +301,25 @@
                             </StackPanel>
                         </GroupBox>
 
-                        <GroupBox Header="Document Structure" Tag="loc:grp_doc_structure" Style="{StaticResource ClassicGroupBox}">
+                        <GroupBox Header="Network Credentials (UNC Paths)" Tag="loc:grp_network_creds" Style="{StaticResource ClassicGroupBox}">
                             <StackPanel>
-                                <TextBlock Text="XPath for repeating records (e.g. //item)"
-                                           Tag="loc:lbl_multi_xpath" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskMultiRecordXPath" FontSize="11" Margin="0,0,0,8"/>
-                                <TextBlock Text="Expression to remove after record"
-                                           Tag="loc:lbl_text_remove" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskTextToRemove" FontSize="11" Margin="0,0,0,8"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <GroupBox Header="Advanced Connection" Tag="loc:grp_adv_connection" Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <CheckBox x:Name="TaskUseConnectionString" Content="Use manual connection string"
-                                          Tag="loc:chk_manual_conn" FontSize="11" Margin="0,0,0,4"
-                                          Checked="TaskUseConnectionString_Changed"
-                                          Unchecked="TaskUseConnectionString_Changed"/>
-                                <TextBox x:Name="TaskConnectionString" FontSize="11"
-                                         Visibility="Collapsed" Margin="0,0,0,8"/>
-                                <TextBlock Text="Target table (e.g. dbo.ScanDetail)"
-                                           Tag="loc:lbl_target_table" Style="{StaticResource FieldLabel}"/>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TaskTableName" FontSize="11" Margin="0,0,4,0"/>
-                                    <Button Grid.Column="1" Content="Get Columns" Tag="loc:btn_get_columns"
-                                            Click="TaskGetColumnsBtn_Click" Style="{StaticResource ClassicButton}"/>
-                                </Grid>
-                                <ListBox x:Name="TaskColumnsList" FontSize="11" MaxHeight="100"
-                                         BorderBrush="#ACACAC" BorderThickness="1"/>
+                                <TextBlock Text="Required when Input/Output/Error paths are on a network share (\\server\share)"
+                                           Tag="loc:lbl_network_creds_info" Style="{StaticResource FieldLabel}"
+                                           Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBlock Text="Windows Username (e.g. DOMAIN\user)" Tag="loc:lbl_net_username"
+                                           Style="{StaticResource FieldLabel}"/>
+                                <TextBox x:Name="TaskNetworkUsername" FontSize="11" Margin="0,0,0,4"/>
+                                <TextBlock Text="Password" Tag="loc:lbl_net_password" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="TaskNetworkPassword" FontSize="11" Margin="0,0,0,4"/>
                             </StackPanel>
                         </GroupBox>
 
                         <GroupBox Header="Target Directory" Tag="loc:grp_target_dir" Style="{StaticResource ClassicGroupBox}">
                             <StackPanel>
-                                <TextBlock Text="Static base directory" Tag="loc:lbl_static_base"
+                                <TextBlock Text="Static base directory (= Output path)" Tag="loc:lbl_static_base"
                                            Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskStaticTargetDir" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBox x:Name="TaskStaticTargetDir" FontSize="11" Margin="0,0,0,8"
+                                         IsReadOnly="True" Background="#F0F0F0"/>
                                 <TextBlock Text="Dynamic target path components" Tag="loc:lbl_dynamic_comp"
                                            Style="{StaticResource FieldLabel}"/>
                                 <ListBox x:Name="TargetDirComponentsList" DisplayMemberPath="DisplayValue"
@@ -355,6 +349,24 @@
                             </StackPanel>
                         </GroupBox>
 
+                        <GroupBox Header="Processing" Tag="loc:grp_processing" Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock Text="Processing delay (seconds after file detected)"
+                                           Tag="loc:lbl_processing_delay" Style="{StaticResource FieldLabel}"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TaskProcessingDelay" FontSize="11" Text="5" VerticalAlignment="Center"/>
+                                    <Slider x:Name="TaskProcessingDelaySlider" Grid.Column="1" Minimum="1" Maximum="120"
+                                            Value="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                                            TickPlacement="BottomRight" Margin="8,0,0,0"
+                                            ValueChanged="TaskProcessingDelaySlider_ValueChanged"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Scheduling &amp; Notifications" Tag="loc:grp_scheduling"
                                   Style="{StaticResource ClassicGroupBox}">
                             <StackPanel>
@@ -364,10 +376,11 @@
                                 <TextBlock Text="Error emails (separate with semicolons)" Tag="loc:lbl_error_emails"
                                            Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="TaskErrorEmails" FontSize="11" Margin="0,0,0,8"/>
-                                <CheckBox x:Name="TaskIsEnabled" Content="Task enabled" Tag="loc:chk_task_enabled"
+                                <CheckBox x:Name="TaskIsEnabled" Visibility="Visible" Content="Task enabled" Tag="loc:chk_task_enabled"
                                           IsChecked="True" FontSize="11"/>
                             </StackPanel>
                         </GroupBox>
+                    </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -376,6 +389,7 @@
             <TabItem Header="Dashboard" Tag="loc:tab_dashboard">
                 <Grid Margin="8">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -392,8 +406,27 @@
                                     Click="RefreshStatusBtn_Click" Style="{StaticResource ClassicButton}"/>
                         </StackPanel>
                     </GroupBox>
+                    
+                    <GroupBox Grid.Row="1" Header="Task Status Selection (Worker Auto-Reloads on save)" Tag="loc:grp_task_status_control" 
+                              Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Select Task:" Tag="loc:lbl_select_task" VerticalAlignment="Center" FontSize="12" FontWeight="Bold" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="DashboardTasksCombo" Width="200" FontSize="11" DisplayMemberPath="Name"
+                                      SelectionChanged="DashboardTasksCombo_SelectionChanged" Margin="0,0,16,0"
+                                      materialDesign:HintAssist.Hint="Select Task..."/>
+                            <Border x:Name="DashboardTaskStatusBorder" Background="#E0E0E0" CornerRadius="3" Padding="6,3" Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse x:Name="DashboardTaskStatusLight" Width="10" Height="10" Fill="Gray" Margin="0,0,6,0"/>
+                                    <TextBlock x:Name="DashboardTaskStatusText" Text="Unknown" FontSize="12" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                    <Button x:Name="DashboardTaskToggleStateBtn" Content="Start/Stop" Tag="loc:btn_toggle_state" 
+                                            FontSize="11" Padding="6,2" Click="DashboardTaskToggleStateBtn_Click" 
+                                            Style="{StaticResource ClassicButton}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </GroupBox>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
                         <Button x:Name="RefreshLogsBtn" Content="Refresh Logs" Tag="loc:btn_refresh_logs"
                                 Click="RefreshLogsBtn_Click"
                                 Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
@@ -409,16 +442,25 @@
                                 Style="{StaticResource VisibleTextButton}" Margin="4,0,0,0"/>
                     </StackPanel>
 
-                    <DataGrid Grid.Row="2" x:Name="LogsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                    <DataGrid Grid.Row="3" x:Name="LogsGrid" AutoGenerateColumns="False" IsReadOnly="True"
                               HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
                               FontSize="11" Background="White" BorderBrush="#ACACAC" BorderThickness="1"
                               GridLinesVisibility="All" HorizontalGridLinesBrush="#D0D0D0" VerticalGridLinesBrush="#D0D0D0"
-                              AlternatingRowBackground="#F7F7F7" RowBackground="White">
+                              AlternatingRowBackground="#F7F7F7" RowBackground="White"
+                              MouseDoubleClick="LogsGrid_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Task" Binding="{Binding TaskName}" Width="*"/>
                             <DataGridTextColumn Header="Filename" Binding="{Binding Filename}" Width="*"/>
-                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
-                            <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="140"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
+                            <DataGridTextColumn Header="Timestamp" Binding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" Width="130"/>
+                            <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding Message}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

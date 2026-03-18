@@ -43,13 +43,16 @@ public static class SchemaMigrator
 
     private static void AddIntegrationTaskColumns(SqliteConnection conn)
     {
-        var columns = new[] { "MultiRecordRootXPath", "TextToRemoveInXPath", "PrependToFileName", "StaticTargetDirectory", "FileNameSuffix", "AddDateTimeToFileName" };
+        var columns = new[] { "MultiRecordRootXPath", "TextToRemoveInXPath", "PrependToFileName", "StaticTargetDirectory", "FileNameSuffix", "AddDateTimeToFileName", "ProcessingDelaySeconds", "NetworkUsername", "EncryptedNetworkPassword" };
         foreach (var col in columns)
         {
             if (ColumnExists(conn, "Tasks", col))
                 continue;
             using var cmd = conn.CreateCommand();
-            var sqlType = col == "AddDateTimeToFileName" ? "INTEGER NOT NULL DEFAULT 0" : "TEXT";
+            var sqlType = col is "AddDateTimeToFileName" ? "INTEGER NOT NULL DEFAULT 0"
+                       : col is "ProcessingDelaySeconds" ? "INTEGER NOT NULL DEFAULT 5"
+                       : col is "EncryptedNetworkPassword" ? "BLOB"
+                       : "TEXT";
             cmd.CommandText = $"ALTER TABLE Tasks ADD COLUMN {col} {sqlType}";
             try { cmd.ExecuteNonQuery(); } catch { /* column may exist */ }
         }
@@ -57,7 +60,7 @@ public static class SchemaMigrator
 
     private static void AddTaskMappingColumns(SqliteConnection conn)
     {
-        var columns = new[] { "DefaultValue", "FindValue", "ReplaceValue", "SortOrder", "IsLiteral", "ValueTemplate" };
+        var columns = new[] { "DefaultValue", "FindValue", "ReplaceValue", "SortOrder", "IsLiteral", "ValueTemplate", "TargetTableName" };
         foreach (var col in columns)
         {
             if (ColumnExists(conn, "TaskMappings", col))

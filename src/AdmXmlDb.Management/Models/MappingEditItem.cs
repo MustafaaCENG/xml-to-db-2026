@@ -70,6 +70,13 @@ public class MappingEditItem : INotifyPropertyChanged
         set { _valueTemplate = value; OnPropertyChanged(nameof(ValueTemplate)); }
     }
 
+    private string? _targetTableName;
+    public string? TargetTableName
+    {
+        get => _targetTableName;
+        set { _targetTableName = value; OnPropertyChanged(nameof(TargetTableName)); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

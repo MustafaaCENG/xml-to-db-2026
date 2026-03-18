@@ -108,7 +108,14 @@ public partial class MainWindow : Window
         try
         {
             using var db = new AdmXmlDbContext(_dbPath);
-            var logs = db.ExecutionLogs
+            var query = db.ExecutionLogs.AsQueryable();
+
+            if (_selectedDashboardTask != null && _selectedDashboardTask.Id > 0)
+            {
+                query = query.Where(x => x.TaskName == _selectedDashboardTask.Name);
+            }
+
+            var logs = query
                 .OrderByDescending(x => x.Timestamp)
                 .Skip(_currentLogPage * LogPageSize)
                 .Take(LogPageSize)
@@ -117,7 +124,7 @@ public partial class MainWindow : Window
             LogsGrid.ItemsSource = logs;
             LogPageInfo.Text = $"Page {_currentLogPage + 1}";
             LogPrevBtn.IsEnabled = _currentLogPage > 0;
-            var total = db.ExecutionLogs.Count();
+            var total = query.Count();
             LogNextBtn.IsEnabled = (_currentLogPage + 1) * LogPageSize < total;
         }
         catch (Exception ex)
@@ -129,6 +136,19 @@ public partial class MainWindow : Window
     private void RefreshLogsBtn_Click(object sender, RoutedEventArgs e) => LoadLogs();
     private void LogPrevBtn_Click(object sender, RoutedEventArgs e) { _currentLogPage--; LoadLogs(); }
     private void LogNextBtn_Click(object sender, RoutedEventArgs e) { _currentLogPage++; LoadLogs(); }
+
+    private void LogsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (LogsGrid.SelectedItem is AdmXmlDb.Core.Entities.ExecutionLog log && !string.IsNullOrEmpty(log.Message))
+        {
+            var title = _currentLang == "tr" ? "Log Detayı" : "Log Detail";
+            var header = _currentLang == "tr"
+                ? $"Görev: {log.TaskName}\nDosya: {log.Filename}\nDurum: {log.Status}\nZaman: {log.Timestamp:yyyy-MM-dd HH:mm:ss}\n\nDetay:"
+                : $"Task: {log.TaskName}\nFile: {log.Filename}\nStatus: {log.Status}\nTime: {log.Timestamp:yyyy-MM-dd HH:mm:ss}\n\nDetails:";
+            System.Windows.MessageBox.Show($"{header}\n\n{log.Message}", title, MessageBoxButton.OK,
+                log.Status == "Failed" ? MessageBoxImage.Error : MessageBoxImage.Information);
+        }
+    }
 
     private void CleanLogsBtn_Click(object sender, RoutedEventArgs e)
     {
@@ -226,7 +246,8 @@ public partial class MainWindow : Window
                 }
                 catch (Exception ex)
                 {
-                    return $"Failed: {ex.Message}";
+                    var msg = ex.InnerException != null ? $"{ex.Message} -> {ex.InnerException.Message}" : ex.Message;
+                    return $"Failed: {msg}";
                 }
             });
             System.Windows.MessageBox.Show(result, "Test Connection");
@@ -246,9 +267,19 @@ public partial class MainWindow : Window
             using var db = new AdmXmlDbContext(_dbPath);
             var tasks = db.Tasks.OrderBy(t => t.Name).ToList();
             TasksCombo.ItemsSource = tasks;
+            if (SettingsTasksCombo != null)
+                SettingsTasksCombo.ItemsSource = tasks;
+            if (DashboardTasksCombo != null)
+            {
+                var dashboardTasks = new List<IntegrationTask> { new IntegrationTask { Id = -1, Name = _currentLang == "tr" ? "Tümü" : "All Tasks" } };
+                dashboardTasks.AddRange(tasks);
+                DashboardTasksCombo.ItemsSource = dashboardTasks;
+            }
         }
         catch { }
     }
+
+    private bool _syncingTaskCombos;
 
     private void TasksCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -257,10 +288,42 @@ public partial class MainWindow : Window
             PopulateTaskFields(_selectedTask);
         else
             ClearTaskFields();
+
+        SyncTaskCombo(TasksCombo, SettingsTasksCombo);
+    }
+
+    private void SettingsTasksCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingTaskCombos) return;
+        var task = SettingsTasksCombo.SelectedItem as IntegrationTask;
+        if (task != null)
+        {
+            _selectedTask = task;
+            PopulateTaskFields(task);
+            SyncTaskCombo(SettingsTasksCombo, TasksCombo);
+        }
+    }
+
+    private void SyncTaskCombo(System.Windows.Controls.ComboBox source, System.Windows.Controls.ComboBox target)
+    {
+        if (_syncingTaskCombos || target == null) return;
+        _syncingTaskCombos = true;
+        try
+        {
+            var selected = source.SelectedItem as IntegrationTask;
+            if (selected != null && target.ItemsSource is IEnumerable<IntegrationTask> items)
+            {
+                var match = items.FirstOrDefault(t => t.Id == selected.Id);
+                if (match != null) target.SelectedItem = match;
+            }
+        }
+        finally { _syncingTaskCombos = false; }
     }
 
     private void PopulateTaskFields(IntegrationTask task)
     {
+        if (TaskSettingsContainer != null) TaskSettingsContainer.IsEnabled = true;
+
         TaskName.Text = task.Name;
         TaskInputPath.Text = task.InputPath;
         TaskOutputPath.Text = task.OutputPath;
@@ -271,12 +334,16 @@ public partial class MainWindow : Window
         TaskCronExpression.Text = task.CronExpression;
         TaskErrorEmails.Text = task.ErrorEmails ?? "";
         TaskIsEnabled.IsChecked = task.IsEnabled;
+        TaskNetworkUsername.Text = task.NetworkUsername ?? "";
+        TaskNetworkPassword.Password = "";
+        if (task.EncryptedNetworkPassword != null && task.EncryptedNetworkPassword.Length > 0)
+        {
+            try { TaskNetworkPassword.Password = DataProtectionHelper.Unprotect(task.EncryptedNetworkPassword); } catch { }
+        }
+        var delay = task.ProcessingDelaySeconds > 0 ? task.ProcessingDelaySeconds : 5;
+        TaskProcessingDelay.Text = delay.ToString();
+        TaskProcessingDelaySlider.Value = delay;
         TaskMultiRecord.IsChecked = !string.IsNullOrWhiteSpace(task.MultiRecordRootXPath);
-        TaskMultiRecordXPath.Text = task.MultiRecordRootXPath ?? "";
-        TaskTextToRemove.Text = task.TextToRemoveInXPath ?? "";
-        TaskUseConnectionString.IsChecked = false;
-        TaskConnectionString.Text = "";
-        TaskConnectionString.Visibility = Visibility.Collapsed;
         TaskDbPassword.Password = "";
 
         var connStr = DataProtectionHelper.Unprotect(task.EncryptedConnectionString);
@@ -286,6 +353,11 @@ public partial class MainWindow : Window
             var (host, dbName, user) = DbConnectionHelper.ParseConnectionString(connStr);
             TaskDbHost.Text = host ?? "";
             TaskDbUser.Text = user ?? "";
+            try {
+                var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connStr);
+                TaskDbPassword.Password = builder.Password ?? "";
+            } catch { }
+
             if (string.IsNullOrEmpty(user))
             {
                 AuthWindows.IsChecked = true;
@@ -314,8 +386,6 @@ public partial class MainWindow : Window
             TaskTablesList.ItemsSource = null;
         }
 
-        TaskTableName.Text = task.TableName;
-
         using var db = new AdmXmlDbContext(_dbPath);
         var taskWithNav = db.Tasks
             .Include(t => t.Mappings)
@@ -323,7 +393,8 @@ public partial class MainWindow : Window
             .FirstOrDefault(t => t.Id == task.Id);
         if (taskWithNav != null)
         {
-            TaskStaticTargetDir.Text = taskWithNav.StaticTargetDirectory ?? "";
+            // Static target dir always mirrors output path
+            TaskStaticTargetDir.Text = taskWithNav.StaticTargetDirectory ?? task.OutputPath ?? "";
             var dirItems = taskWithNav.TargetDirectoryComponents.OrderBy(c => c.SortOrder)
                 .Select(c => new TargetDirComponentItem(c.Id, c.ComponentType, c.Value, c.SortOrder)).ToList();
             TargetDirComponentsList.ItemsSource = new ObservableCollection<TargetDirComponentItem>(dirItems);
@@ -340,7 +411,8 @@ public partial class MainWindow : Window
                 ReplaceValue = m.ReplaceValue ?? "",
                 SortOrder = m.SortOrder,
                 IsLiteral = m.IsLiteral,
-                ValueTemplate = m.ValueTemplate ?? ""
+                ValueTemplate = m.ValueTemplate ?? "",
+                TargetTableName = m.TargetTableName ?? task.TableName ?? ""
             }).ToList();
             MappingsGrid.ItemsSource = new ObservableCollection<MappingEditItem>(items);
         }
@@ -353,9 +425,83 @@ public partial class MainWindow : Window
         UpdateFileNamePreview();
         UpdateFolderPreviews();
     }
+    
+    // ======================== DASHBOARD TAB TASKS ========================
+    
+    private IntegrationTask? _selectedDashboardTask;
+
+    private void DashboardTasksCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        _selectedDashboardTask = DashboardTasksCombo.SelectedItem as IntegrationTask;
+        if (_selectedDashboardTask != null && _selectedDashboardTask.Id > 0)
+        {
+            DashboardTaskStatusBorder.Visibility = Visibility.Visible;
+            UpdateDashboardTaskStatusUI(_selectedDashboardTask.IsEnabled);
+        }
+        else
+        {
+            DashboardTaskStatusBorder.Visibility = Visibility.Collapsed;
+        }
+        
+        _currentLogPage = 0;
+        LoadLogs();
+    }
+
+    private void UpdateDashboardTaskStatusUI(bool isEnabled)
+    {
+        if (isEnabled)
+        {
+            DashboardTaskStatusLight.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.LimeGreen);
+            DashboardTaskStatusText.Text = _currentLang == "tr" ? "Çalışıyor" : "Running";
+            DashboardTaskToggleStateBtn.Content = _currentLang == "tr" ? "Durdur" : "Stop";
+        }
+        else
+        {
+            DashboardTaskStatusLight.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.OrangeRed);
+            DashboardTaskStatusText.Text = _currentLang == "tr" ? "Duraklatıldı" : "Stopped";
+            DashboardTaskToggleStateBtn.Content = _currentLang == "tr" ? "Başlat" : "Start";
+        }
+    }
+
+    private void DashboardTaskToggleStateBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedDashboardTask == null || _selectedDashboardTask.Id == 0) return;
+
+        try
+        {
+            using var db = new AdmXmlDbContext(_dbPath);
+            var dbTask = db.Tasks.Find(_selectedDashboardTask.Id);
+            if (dbTask != null)
+            {
+                dbTask.IsEnabled = !dbTask.IsEnabled;
+                db.SaveChanges();
+                
+                // Update local instances
+                _selectedDashboardTask.IsEnabled = dbTask.IsEnabled;
+                if (_selectedTask != null && _selectedTask.Id == dbTask.Id) {
+                    _selectedTask.IsEnabled = dbTask.IsEnabled;
+                    if (TaskIsEnabled != null) TaskIsEnabled.IsChecked = dbTask.IsEnabled;
+                }
+                
+                UpdateDashboardTaskStatusUI(dbTask.IsEnabled);
+                
+                var statusText = _currentLang == "tr" 
+                    ? (dbTask.IsEnabled ? "Görev başlatıldı. Worker servisi değişiklikleri yakında algılayacak." : "Görev durduruldu. Worker servisi görev işlemeyi kesecek.") 
+                    : (dbTask.IsEnabled ? "Task started. Worker service will reload shortly." : "Task stopped. Worker service will stop processing.");
+                
+                System.Windows.MessageBox.Show(statusText, _currentLang == "tr" ? "Bilgi" : "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+        }
+    }
 
     private void ClearTaskFields()
     {
+        if (TaskSettingsContainer != null) TaskSettingsContainer.IsEnabled = false;
+
         TaskName.Text = "";
         TaskInputPath.Text = "";
         TaskOutputPath.Text = "";
@@ -366,18 +512,15 @@ public partial class MainWindow : Window
         TaskDbHost.Text = "";
         TaskDbUser.Text = "";
         TaskDbPassword.Password = "";
-        TaskConnectionString.Text = "";
-        TaskUseConnectionString.IsChecked = false;
-        TaskConnectionString.Visibility = Visibility.Collapsed;
-        TaskTableName.Text = "";
-        TaskColumnsList.ItemsSource = null;
         TaskMultiRecord.IsChecked = false;
-        TaskMultiRecordXPath.Text = "";
-        TaskTextToRemove.Text = "";
         TaskStaticTargetDir.Text = "";
         TargetDirComponentsList.ItemsSource = new ObservableCollection<TargetDirComponentItem>();
         TaskCronExpression.Text = "0 0 * * * ?";
         TaskErrorEmails.Text = "";
+        TaskProcessingDelay.Text = "5";
+        TaskProcessingDelaySlider.Value = 5;
+        TaskNetworkUsername.Text = "";
+        TaskNetworkPassword.Password = "";
         TaskIsEnabled.IsChecked = true;
         MappingsGrid.ItemsSource = new ObservableCollection<MappingEditItem>();
         DatabasesCombo.ItemsSource = null;
@@ -470,8 +613,6 @@ public partial class MainWindow : Window
         var tableName = TaskTablesList.SelectedItem as string;
         if (string.IsNullOrEmpty(tableName)) return;
 
-        TaskTableName.Text = tableName;
-
         if (string.IsNullOrEmpty(_currentConnectionString)) return;
         var cols = DbConnectionHelper.GetTableColumns(_currentConnectionString, tableName);
         TaskColumnsListLeft.ItemsSource = cols.Select(c => c.ColumnName).ToList();
@@ -479,9 +620,6 @@ public partial class MainWindow : Window
 
     private string BuildConnectionStringFromUI(string database)
     {
-        if (TaskUseConnectionString.IsChecked == true)
-            return TaskConnectionString.Text ?? "";
-
         var useWindowsAuth = AuthWindows.IsChecked == true;
         return DbConnectionHelper.BuildConnectionString(
             TaskDbHost.Text ?? "",
@@ -492,30 +630,24 @@ public partial class MainWindow : Window
 
     private string GetCurrentConnectionString()
     {
-        if (TaskUseConnectionString.IsChecked == true)
-            return TaskConnectionString.Text ?? "";
-
         var dbName = DatabasesCombo.SelectedItem as string;
-        return BuildConnectionStringFromUI(dbName ?? TaskTableName.Text?.Split('.').FirstOrDefault() ?? "master");
+        return BuildConnectionStringFromUI(dbName ?? (_selectedTask?.TableName ?? "").Split('.').FirstOrDefault() ?? "master");
     }
 
     private void TaskUseConnectionString_Changed(object sender, RoutedEventArgs e)
     {
-        var useManual = TaskUseConnectionString.IsChecked == true;
-        TaskConnectionString.Visibility = useManual ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void TaskGetColumnsBtn_Click(object sender, RoutedEventArgs e)
     {
         var connStr = GetCurrentConnectionString();
-        var table = TaskTableName.Text?.Trim();
+        var table = (_selectedTask?.TableName ?? "").Trim();
         if (string.IsNullOrEmpty(connStr) || string.IsNullOrEmpty(table))
         {
             System.Windows.MessageBox.Show("Enter connection details and table name first.", "Error");
             return;
         }
         var cols = DbConnectionHelper.GetTableColumns(connStr, table);
-        TaskColumnsList.ItemsSource = cols.Select(c => $"{c.ColumnName} ({c.DataType})").ToList();
     }
 
     // ======================== FOLDER BROWSING ========================
@@ -531,7 +663,15 @@ public partial class MainWindow : Window
         {
             target.Text = dlg.SelectedPath;
             UpdateFolderPreviews();
+            if (target == TaskOutputPath)
+                SyncStaticTargetDirFromOutput();
         }
+    }
+
+    private void SyncStaticTargetDirFromOutput()
+    {
+        if (TaskStaticTargetDir != null)
+            TaskStaticTargetDir.Text = TaskOutputPath.Text ?? "";
     }
 
     private void BrowseInputPath_Click(object sender, RoutedEventArgs e) => BrowseFolder(TaskInputPath);
@@ -543,6 +683,14 @@ public partial class MainWindow : Window
         InputPreview.Text = TaskInputPath.Text;
         ErrorPreview.Text = TaskErrorPath.Text;
         UpdateFileNamePreview();
+    }
+
+    // ======================== PROCESSING DELAY ========================
+
+    private void TaskProcessingDelaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (TaskProcessingDelay != null)
+            TaskProcessingDelay.Text = ((int)e.NewValue).ToString();
     }
 
     // ======================== FILE NAME PREVIEW ========================
@@ -677,13 +825,22 @@ public partial class MainWindow : Window
     private void AddToMappingBtn_Click(object sender, RoutedEventArgs e)
     {
         var columnName = TaskColumnsListLeft.SelectedItem as string;
-        var xpath = _selectedXPath;
+        
+        // Find all checked XPaths
+        var checkedXPaths = new List<string>();
+        FindCheckedNodes(XmlTreeView.Items, checkedXPaths);
 
-        if (string.IsNullOrEmpty(columnName) && string.IsNullOrEmpty(xpath))
+        // Fallback to selected XPath if no checkboxes are checked
+        if (checkedXPaths.Count == 0 && !string.IsNullOrEmpty(_selectedXPath))
+        {
+            checkedXPaths.Add(_selectedXPath);
+        }
+
+        if (string.IsNullOrEmpty(columnName) && checkedXPaths.Count == 0)
         {
             var warn = _currentLang == "tr"
-                ? "Sol panelden bir kolon ve/veya Ağaç Görünümünden bir XML düğümü seçin."
-                : "Select a Column from the left panel and/or an XML node from Tree View.";
+                ? "Sol panelden bir kolon ve/veya Ağaç Görünümünden düğüm(ler) seçin."
+                : "Select a Column from the left panel and/or XML node(s) from Tree View.";
             System.Windows.MessageBox.Show(warn, _currentLang == "tr" ? "Bilgi" : "Info");
             return;
         }
@@ -692,19 +849,114 @@ public partial class MainWindow : Window
         if (src == null)
             MappingsGrid.ItemsSource = src = new ObservableCollection<MappingEditItem>();
 
-        src.Add(new MappingEditItem
+        var newItem = new MappingEditItem
         {
             ColumnName = columnName ?? "",
-            XPath = xpath ?? "",
             SqlDataType = SqlDataType.VARCHAR,
-            SortOrder = src.Count
-        });
+            SortOrder = src.Count,
+            TargetTableName = _selectedTask?.TableName ?? ""
+        };
 
-        var msg = _currentLang == "tr"
-            ? $"Eşleme oluşturuldu:\n  Kolon: {columnName ?? "-"}\n  XPath: {xpath ?? "-"}"
-            : $"Mapping created:\n  Column: {columnName ?? "-"}\n  XPath: {xpath ?? "-"}";
-        System.Windows.MessageBox.Show(msg, _currentLang == "tr" ? "Bilgi" : "Info",
+        if (checkedXPaths.Count == 1)
+        {
+            newItem.XPath = checkedXPaths[0];
+        }
+        else if (checkedXPaths.Count > 1)
+        {
+            newItem.XPath = checkedXPaths[0]; // Set first as XPath just in case
+            newItem.ValueTemplate = string.Join("-", checkedXPaths.Select(xp => $"{{{xp}}}"));
+        }
+
+        src.Add(newItem);
+        
+        // Optionally uncheck after adding
+        UncheckAllNodes(XmlTreeView.Items);
+        
+        // Try to preview the current value for the new mapping using the loaded XML (if any)
+        string? previewValue = null;
+        try
+        {
+            var xml = _taskXmlContent ?? _loadedXmlContent;
+            if (!string.IsNullOrEmpty(xml))
+            {
+                if (!string.IsNullOrWhiteSpace(newItem.ValueTemplate))
+                {
+                    var doc = new XmlDocument();
+                    doc.LoadXml(xml);
+                    var nsManager = new XmlNamespaceManager(doc.NameTable);
+                    var ctx = doc.DocumentElement ?? (XmlNode)doc;
+
+                    previewValue = System.Text.RegularExpressions.Regex.Replace(newItem.ValueTemplate, @"\{(.+?)\}", match =>
+                    {
+                        var xp = match.Groups[1].Value;
+                        try
+                        {
+                            var n = ctx.SelectSingleNode(xp, nsManager);
+                            return n?.InnerText?.Trim() ?? "";
+                        }
+                        catch { return ""; }
+                    });
+                }
+                else if (!string.IsNullOrWhiteSpace(newItem.XPath))
+                {
+                    previewValue = XmlParser.TestXPath(xml, newItem.XPath);
+                }
+            }
+        }
+        catch
+        {
+            previewValue = null;
+        }
+        
+        var baseMsg = _currentLang == "tr"
+            ? $"Eşleme eklendi:\n  Kolon: {columnName ?? "-"}\n  " + (checkedXPaths.Count > 1 ? $"Şablon: {newItem.ValueTemplate}" : $"XPath: {newItem.XPath ?? "-"}")
+            : $"Mapping added:\n  Column: {columnName ?? "-"}\n  " + (checkedXPaths.Count > 1 ? $"Template: {newItem.ValueTemplate}" : $"XPath: {newItem.XPath ?? "-"}");
+
+        if (previewValue != null)
+        {
+            baseMsg += _currentLang == "tr"
+                ? $"\n  Örnek değer: {previewValue}"
+                : $"\n  Sample value: {previewValue}";
+        }
+        
+        System.Windows.MessageBox.Show(baseMsg, _currentLang == "tr" ? "Bilgi" : "Info",
             MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void FindCheckedNodes(ItemCollection items, List<string> checkedXPaths)
+    {
+        foreach (var item in items)
+        {
+            if (item is TreeViewItem tvi)
+            {
+                if (tvi.Header is StackPanel panel)
+                {
+                    var checkBox = panel.Children.OfType<System.Windows.Controls.CheckBox>().FirstOrDefault();
+                    if (checkBox != null && checkBox.IsChecked == true && checkBox.Tag is string xpath)
+                    {
+                        checkedXPaths.Add(xpath);
+                    }
+                }
+                FindCheckedNodes(tvi.Items, checkedXPaths);
+            }
+        }
+    }
+
+    private void UncheckAllNodes(ItemCollection items)
+    {
+        foreach (var item in items)
+        {
+            if (item is TreeViewItem tvi)
+            {
+                if (tvi.Header is StackPanel panel)
+                {
+                    var checkBox = panel.Children.OfType<System.Windows.Controls.CheckBox>().FirstOrDefault();
+                    if (checkBox != null)
+                        checkBox.IsChecked = false;
+                }
+                UncheckAllNodes(tvi.Items);
+            }
+        }
     }
 
     private TreeViewItem BuildTreeItem(XmlNode node, string parentXPath)
@@ -718,12 +970,21 @@ public partial class MainWindow : Window
 
             var headerPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
 
+            var checkBox = new System.Windows.Controls.CheckBox 
+            { 
+                Margin = new Thickness(0, 0, 4, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Tag = currentXPath
+            };
+            headerPanel.Children.Add(checkBox);
+
             var tagBlock = new System.Windows.Controls.TextBlock
             {
                 Text = element.Name,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0, 0, 180))
+                    System.Windows.Media.Color.FromRgb(0, 0, 180)),
+                VerticalAlignment = VerticalAlignment.Center
             };
             headerPanel.Children.Add(tagBlock);
 
@@ -736,14 +997,16 @@ public partial class MainWindow : Window
                     {
                         Text = $"  {attr.Name}=",
                         Foreground = new System.Windows.Media.SolidColorBrush(
-                            System.Windows.Media.Color.FromRgb(120, 0, 0))
+                            System.Windows.Media.Color.FromRgb(120, 0, 0)),
+                        VerticalAlignment = VerticalAlignment.Center
                     };
                     headerPanel.Children.Add(attrBlock);
                     var valBlock = new System.Windows.Controls.TextBlock
                     {
                         Text = $"\"{attr.Value}\"",
                         Foreground = new System.Windows.Media.SolidColorBrush(
-                            System.Windows.Media.Color.FromRgb(0, 120, 0))
+                            System.Windows.Media.Color.FromRgb(0, 120, 0)),
+                        VerticalAlignment = VerticalAlignment.Center
                     };
                     headerPanel.Children.Add(valBlock);
                 }
@@ -760,7 +1023,8 @@ public partial class MainWindow : Window
                     {
                         Text = $": {text}",
                         Foreground = new System.Windows.Media.SolidColorBrush(
-                            System.Windows.Media.Color.FromRgb(60, 60, 60))
+                            System.Windows.Media.Color.FromRgb(60, 60, 60)),
+                        VerticalAlignment = VerticalAlignment.Center
                     };
                     headerPanel.Children.Add(valueBlock);
                 }
@@ -802,7 +1066,16 @@ public partial class MainWindow : Window
             return $"{parentXPath}/{nodeXPath}[@Name='{nameAttr}']";
         }
 
-        // Akıllı filtreleme (Güçlü bir attribute yoksa çocuk elementin değerine göre filtrele)
+        // Root element (parentXPath is empty) never needs a content-based filter
+        // because it is unique by definition.
+        bool isRoot = string.IsNullOrEmpty(parentXPath);
+        if (isRoot)
+        {
+            return $"/{nodeXPath}";
+        }
+
+        // Smart filtering: only use Label/Key/Name child text as filter
+        // (safe because these are classification values, not variable data).
         bool hasFilter = false;
         string? valueChildName = null;
 
@@ -810,21 +1083,18 @@ public partial class MainWindow : Window
         {
             if (child is XmlElement childEl)
             {
-                // Sadece metin içeren basit bir çocuksa (örn: <Label>DOKUMAN_TIPI</Label>)
                 if ((!childEl.HasChildNodes || (childEl.ChildNodes.Count == 1 && childEl.FirstChild is XmlText)) &&
                     !string.IsNullOrWhiteSpace(childEl.InnerText))
                 {
                     var childName = childEl.LocalName;
                     var childText = childEl.InnerText.Trim().Replace("'", "&apos;");
-                    
-                    // Eğer bu element muhtemelen bir "Key/Label" ise onu filtre olarak kullan
+
                     if (!hasFilter && !childText.Contains("&apos;") && 
                         (childName.Contains("Name", StringComparison.OrdinalIgnoreCase) || childName.Contains("Label", StringComparison.OrdinalIgnoreCase) || childName.Contains("Key", StringComparison.OrdinalIgnoreCase)))
                     {
                         nodeXPath += $"[*[local-name()='{childName}']='{childText}']";
                         hasFilter = true;
                     }
-                    // Eğer bu element muhtemelen "Value" taşıyan çocuksa, adını aklımızda tut
                     else if (hasFilter && (childName.Contains("Value", StringComparison.OrdinalIgnoreCase) || childName.Contains("Val", StringComparison.OrdinalIgnoreCase)))
                     {
                         valueChildName = childName;
@@ -833,29 +1103,14 @@ public partial class MainWindow : Window
             }
         }
 
-        // Eğer ebeveyn düğüme (IndexValue) tıklandıysa ve içinde hem filtre (Label) hem değer (Value) varsa, doğrudan değere yönlendir
         if (hasFilter && !string.IsNullOrEmpty(valueChildName))
         {
             return $"{parentXPath}/{nodeXPath}/*[local-name()='{valueChildName}']";
         }
 
-        // Sadece tek bir etiket bulduk ama Value bulamadıysak veya hiçbiri yoksa
-        if (!hasFilter)
-        {
-           foreach (XmlNode child in element.ChildNodes)
-           {
-               if (child is XmlElement childEl && (!childEl.HasChildNodes || (childEl.ChildNodes.Count == 1 && childEl.FirstChild is XmlText)) && !string.IsNullOrWhiteSpace(childEl.InnerText))
-               {
-                   var childText = childEl.InnerText.Trim().Replace("'", "&apos;");
-                   if (!childText.Contains("&apos;"))
-                   {
-                        nodeXPath += $"[*[local-name()='{childEl.LocalName}']='{childText}']";
-                        break;
-                   }
-               }
-           }
-        }
-
+        // No Label/Key/Name based filter found: return WITHOUT any content-based
+        // filter to avoid hardcoding variable data (like file paths, numbers, etc.)
+        // into the XPath which would break for other XML files.
         return $"{parentXPath}/{nodeXPath}";
     }
 
@@ -869,7 +1124,7 @@ public partial class MainWindow : Window
             System.Windows.MessageBox.Show("Load an XML file first.", "Info");
             return;
         }
-        var xpath = TaskMultiRecordXPath.Text?.Trim();
+        var xpath = "";
         if (string.IsNullOrEmpty(xpath))
         {
             System.Windows.MessageBox.Show("Enter an XPath to test.", "Error");
@@ -1015,9 +1270,32 @@ public partial class MainWindow : Window
                 }
             }
 
-            if (!string.IsNullOrEmpty(item.ValueTemplate) && value != null)
+            if (!string.IsNullOrEmpty(item.ValueTemplate))
             {
-                value = item.ValueTemplate.Replace("{value}", value);
+                try
+                {
+                    var doc = new XmlDocument();
+                    doc.LoadXml(xml);
+                    var nsManager = new XmlNamespaceManager(doc.NameTable);
+                    var ctx = doc.DocumentElement ?? (XmlNode)doc;
+
+                    value = System.Text.RegularExpressions.Regex.Replace(item.ValueTemplate, @"\{(.+?)\}", match =>
+                    {
+                        var xp = match.Groups[1].Value;
+                        if (xp == "value") return value ?? ""; // legacy {value} support
+                        try
+                        {
+                            var n = ctx.SelectSingleNode(xp, nsManager);
+                            return n?.InnerText?.Trim() ?? "";
+                        }
+                        catch { return ""; }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Değer şablonu hatası:\n{ex.Message}", "Hata");
+                    return;
+                }
             }
 
             if (string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(item.DefaultValue))
@@ -1029,6 +1307,17 @@ public partial class MainWindow : Window
         }
     }
 
+    private void DeleteMappingRowBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.DataContext is MappingEditItem item)
+        {
+            if (MappingsGrid.ItemsSource is ObservableCollection<MappingEditItem> src)
+            {
+                src.Remove(item);
+            }
+        }
+    }
+
     // ======================== SAVE TASK ========================
 
     private void SaveTaskBtn_Click(object sender, RoutedEventArgs e)
@@ -1037,13 +1326,18 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(TaskName.Text))
             {
-                System.Windows.MessageBox.Show("Task name is required.", "Error");
+                System.Windows.MessageBox.Show(_currentLang == "tr" ? "Görev Adı zorunludur." : "Task name is required.", "Error");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(TaskInputPath.Text) || string.IsNullOrWhiteSpace(TaskOutputPath.Text) || string.IsNullOrWhiteSpace(TaskErrorPath.Text))
+            {
+                System.Windows.MessageBox.Show(_currentLang == "tr" ? "Giriş, Çıkış ve Hata klasör yolları boş bırakılamaz." : "Input, Output, and Error folder paths cannot be empty.", "Error");
                 return;
             }
             var cron = (TaskCronExpression.Text ?? "").Trim();
             if (!string.IsNullOrEmpty(cron) && !Quartz.CronExpression.IsValidExpression(cron))
             {
-                System.Windows.MessageBox.Show("Invalid cron expression.", "Error");
+                System.Windows.MessageBox.Show(_currentLang == "tr" ? "Geçersiz cron ifadesi." : "Invalid cron expression.", "Error");
                 return;
             }
 
@@ -1072,10 +1366,10 @@ public partial class MainWindow : Window
                 ? null : TaskFileNameSuffix.Text.Trim();
             task.AddDateTimeToFileName = TaskAddDateTime.IsChecked == true;
             task.MultiRecordRootXPath = TaskMultiRecord.IsChecked == true
-                && !string.IsNullOrWhiteSpace(TaskMultiRecordXPath.Text)
-                ? TaskMultiRecordXPath.Text.Trim() : null;
-            task.TextToRemoveInXPath = string.IsNullOrWhiteSpace(TaskTextToRemove.Text)
-                ? null : TaskTextToRemove.Text.Trim();
+                && !string.IsNullOrWhiteSpace(_selectedTask?.MultiRecordRootXPath)
+                ? _selectedTask?.MultiRecordRootXPath?.Trim() : null;
+            task.TextToRemoveInXPath = string.IsNullOrWhiteSpace(_selectedTask?.TextToRemoveInXPath)
+                ? null : _selectedTask?.TextToRemoveInXPath?.Trim();
             task.StaticTargetDirectory = string.IsNullOrWhiteSpace(TaskStaticTargetDir.Text)
                 ? null : TaskStaticTargetDir.Text.Trim();
 
@@ -1083,11 +1377,16 @@ public partial class MainWindow : Window
             if (!string.IsNullOrEmpty(connStr))
                 task.EncryptedConnectionString = DataProtectionHelper.Protect(connStr);
 
-            task.TableName = TaskTableName.Text ?? "";
+            task.TableName = _selectedTask?.TableName ?? "";
             task.CronExpression = string.IsNullOrWhiteSpace(TaskCronExpression.Text)
                 ? "0 0 * * * ?" : TaskCronExpression.Text.Trim();
             task.ErrorEmails = TaskErrorEmails.Text ?? "";
             task.IsEnabled = TaskIsEnabled.IsChecked == true;
+            task.ProcessingDelaySeconds = int.TryParse(TaskProcessingDelay.Text, out var delaySec) && delaySec > 0 ? delaySec : 5;
+            task.NetworkUsername = string.IsNullOrWhiteSpace(TaskNetworkUsername.Text) ? null : TaskNetworkUsername.Text.Trim();
+            task.EncryptedNetworkPassword = string.IsNullOrEmpty(TaskNetworkPassword.Password)
+                ? null : DataProtectionHelper.Protect(TaskNetworkPassword.Password);
+            task.StaticTargetDirectory = TaskOutputPath.Text ?? "";
 
             db.TargetDirectoryComponents.RemoveRange(task.TargetDirectoryComponents);
             task.TargetDirectoryComponents.Clear();
@@ -1145,7 +1444,8 @@ public partial class MainWindow : Window
                     ReplaceValue = string.IsNullOrWhiteSpace(item.ReplaceValue) ? null : item.ReplaceValue.Trim(),
                     SortOrder = items.IndexOf(item),
                     IsLiteral = item.IsLiteral,
-                    ValueTemplate = string.IsNullOrWhiteSpace(item.ValueTemplate) ? null : item.ValueTemplate.Trim()
+                    ValueTemplate = string.IsNullOrWhiteSpace(item.ValueTemplate) ? null : item.ValueTemplate.Trim(),
+                    TargetTableName = string.IsNullOrWhiteSpace(item.TargetTableName) ? null : item.TargetTableName.Trim()
                 });
             }
             db.SaveChanges();
@@ -1247,6 +1547,13 @@ public partial class MainWindow : Window
         }
     }
 
+    public class ParsedRecordItem
+    {
+        public int RowIndex { get; set; }
+        public string ColumnName { get; set; }
+        public string Value { get; set; }
+    }
+
     private void ParseAndShow()
     {
         if (string.IsNullOrEmpty(_loadedXmlContent) || SimTaskCombo.SelectedItem is not IntegrationTask task)
@@ -1258,9 +1565,38 @@ public partial class MainWindow : Window
         try
         {
             var allRows = XmlParser.ExtractAllRows(_loadedXmlContent, task);
-            var displayRows = allRows.Select(row =>
-                row.ToDictionary(k => k.Key, v => v.Value?.ToString() ?? "(null)")
-            ).ToList();
+            
+            var displayRows = new List<ParsedRecordItem>();
+            for (var i = 0; i < allRows.Count; i++)
+            {
+                var row = allRows[i];
+                foreach (var kvp in row)
+                {
+                var val = kvp.Value;
+                string displayValue;
+
+                if (val == null || val is DBNull)
+                {
+                    displayValue = "(null)";
+                }
+                else if (val is DateTime dt)
+                {
+                    displayValue = dt.ToString("yyyy-MM-dd HH:mm:ss");
+                }
+                else
+                {
+                    displayValue = val.ToString() ?? "(null)";
+                }
+
+                displayRows.Add(new ParsedRecordItem
+                {
+                    RowIndex = i + 1,
+                    ColumnName = kvp.Key,
+                    Value = displayValue
+                });
+                }
+            }
+            
             ParsedDataGrid.ItemsSource = displayRows;
 
             var sqlLines = allRows.Select(row => SqlInsertBuilder.BuildInsertStatement(task.TableName, row));
@@ -1363,13 +1699,13 @@ public partial class MainWindow : Window
 
         UpdateDataGridHeaders(MappingsGrid, new[]
         {
-            "col_priority", "col_column_name", "col_data_type", "col_xml_node",
+            "col_priority", "col_target_table", "col_column_name", "col_data_type", "col_xml_node",
             "col_search_term", "col_replace_with", "col_xml_default", "col_value_template", "col_literal"
         }, dict);
 
         UpdateDataGridHeaders(LogsGrid, new[]
         {
-            "col_task", "col_filename", "col_status", "col_timestamp"
+            "col_task", "col_filename", "col_status", "col_timestamp", "col_message"
         }, dict);
 
         AddToMappingBtn.ToolTip = dict["tip_add_mapping"];

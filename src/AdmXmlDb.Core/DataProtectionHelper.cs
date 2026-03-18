@@ -5,6 +5,8 @@ namespace AdmXmlDb.Core;
 
 /// <summary>
 /// Wrapper for Windows DPAPI to encrypt/decrypt sensitive data at rest.
+/// Uses LocalMachine scope so the Windows Service (LocalSystem) and the
+/// Management UI (interactive user) can both encrypt and decrypt.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public static class DataProtectionHelper
@@ -17,7 +19,7 @@ public static class DataProtectionHelper
             return [];
 
         var plainBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-        return ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.CurrentUser);
+        return ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.LocalMachine);
     }
 
     public static string Unprotect(byte[]? encryptedData)
@@ -25,7 +27,23 @@ public static class DataProtectionHelper
         if (encryptedData == null || encryptedData.Length == 0)
             return string.Empty;
 
-        var decryptedBytes = ProtectedData.Unprotect(encryptedData, Entropy, DataProtectionScope.CurrentUser);
-        return System.Text.Encoding.UTF8.GetString(decryptedBytes);
+        try
+        {
+            var decryptedBytes = ProtectedData.Unprotect(encryptedData, Entropy, DataProtectionScope.LocalMachine);
+            return System.Text.Encoding.UTF8.GetString(decryptedBytes);
+        }
+        catch (CryptographicException)
+        {
+            // Fallback: try decrypting with the old CurrentUser scope (migration scenario)
+            try
+            {
+                var decryptedBytes = ProtectedData.Unprotect(encryptedData, Entropy, DataProtectionScope.CurrentUser);
+                return System.Text.Encoding.UTF8.GetString(decryptedBytes);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
     }
 }

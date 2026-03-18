@@ -68,6 +68,23 @@ public class IntegrationTask
     /// </summary>
     public bool AddDateTimeToFileName { get; set; }
 
+    /// <summary>
+    /// Seconds to wait after a file appears in the input folder before processing it.
+    /// Gives slow/large file copies time to finish writing.
+    /// </summary>
+    public int ProcessingDelaySeconds { get; set; } = 5;
+
+    /// <summary>
+    /// Optional Windows username for accessing UNC network shares (e.g. DOMAIN\user).
+    /// </summary>
+    [MaxLength(200)]
+    public string? NetworkUsername { get; set; }
+
+    /// <summary>
+    /// DPAPI-encrypted password for UNC network share access.
+    /// </summary>
+    public byte[]? EncryptedNetworkPassword { get; set; }
+
     public ICollection<TaskMapping> Mappings { get; set; } = new List<TaskMapping>();
     public ICollection<TargetDirectoryComponent> TargetDirectoryComponents { get; set; } = new List<TargetDirectoryComponent>();
 }

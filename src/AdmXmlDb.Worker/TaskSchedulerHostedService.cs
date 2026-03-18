@@ -33,34 +33,62 @@ public class TaskSchedulerHostedService : IHostedService
         await db.Database.EnsureCreatedAsync(cancellationToken);
         SchemaMigrator.Migrate(db);
 
+        // Delete all existing jobs in the integration group first to prevent ghost/zombie tasks
+        var existingJobKeys = await scheduler.GetJobKeys(Quartz.Impl.Matchers.GroupMatcher<JobKey>.GroupEquals("xml-integration"), cancellationToken);
+        if (existingJobKeys.Count > 0)
+        {
+            await scheduler.DeleteJobs(existingJobKeys, cancellationToken);
+            _logger.LogInformation("Cleaned up {Count} previous job(s) from the scheduler.", existingJobKeys.Count);
+        }
+
         var enabledTasks = await db.Tasks
             .Where(t => t.IsEnabled)
             .ToListAsync(cancellationToken);
 
         foreach (var task in enabledTasks)
         {
-            var jobKey = new JobKey($"task-{task.Id}", "xml-integration");
-            if (await scheduler.CheckExists(jobKey, cancellationToken))
-                await scheduler.DeleteJob(jobKey, cancellationToken);
+            try
+            {
+                var jobKey = new JobKey($"task-{task.Id}", "xml-integration");
 
-            if (!Quartz.CronExpression.IsValidExpression(task.CronExpression))
-                continue;
+                var job = JobBuilder.Create<XmlIntegrationJob>()
+                    .WithIdentity(jobKey)
+                    .UsingJobData(XmlIntegrationJob.TaskIdKey, task.Id)
+                    .StoreDurably(true)
+                    .Build();
 
-            var job = JobBuilder.Create<XmlIntegrationJob>()
-                .WithIdentity(jobKey)
-                .UsingJobData(XmlIntegrationJob.TaskIdKey, task.Id)
-                .Build();
+                await scheduler.AddJob(job, true, cancellationToken);
 
-            var trigger = TriggerBuilder.Create()
-                .WithIdentity($"trigger-{task.Id}", "xml-integration")
-                .WithCronSchedule(task.CronExpression)
-                .Build();
+                var hasValidCron = !string.IsNullOrWhiteSpace(task.CronExpression) &&
+                                   Quartz.CronExpression.IsValidExpression(task.CronExpression);
 
-            await scheduler.ScheduleJob(job, trigger, cancellationToken);
+                if (hasValidCron)
+                {
+                    var trigger = TriggerBuilder.Create()
+                        .WithIdentity($"trigger-{task.Id}", "xml-integration")
+                        .ForJob(job) // jobKey yerine direkt job verelim
+                        .WithCronSchedule(task.CronExpression!)
+                        .Build();
 
-            // Başlangıçta mevcut dosyaları işlemek için hemen tetikle
-            await scheduler.TriggerJob(jobKey, cancellationToken);
-            _logger.LogInformation("Task {TaskName} (Id={Id}) scheduled and triggered for startup", task.Name, task.Id);
+                    await scheduler.ScheduleJob(trigger, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning("Task {TaskName} (Id={Id}) has no valid cron expression. It will only run on startup and on folder watcher events.", task.Name, task.Id);
+                }
+
+                // Başlangıçta mevcut dosyaları işlemek için hemen tetikle
+                await scheduler.TriggerJob(jobKey, cancellationToken);
+                _logger.LogInformation(
+                    "Task {TaskName} (Id={Id}) scheduled (HasCron={HasCron}) and triggered for startup",
+                    task.Name, task.Id, hasValidCron);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule task {TaskName} (Id={Id}). This task will be skipped, other tasks will continue.",
+                    task.Name, task.Id);
+            }
         }
     }
 }

@@ -68,6 +68,7 @@ public static class Localization
 
             // DataGrid - Mapping
             ["col_priority"] = "Öncelik",
+            ["col_target_table"] = "Hedef Tablo",
             ["col_column_name"] = "Kolon Adı",
             ["col_data_type"] = "Veri Tipi",
             ["col_xml_node"] = "XML Düğümü",
@@ -95,10 +96,17 @@ public static class Localization
             ["btn_remove"] = "Sil",
             ["btn_move_up"] = "Yukarı",
             ["btn_move_down"] = "Aşağı",
+            ["grp_network_creds"] = "Ağ Kimlik Bilgileri (UNC Yolları)",
+            ["lbl_network_creds_info"] = "Giriş/Çıkış/Hata yolları ağ paylaşımında ise (\\\\sunucu\\paylaşım) gereklidir",
+            ["lbl_net_username"] = "Windows Kullanıcı Adı (örn: DOMAIN\\kullanici)",
+            ["lbl_net_password"] = "Şifre",
             ["grp_scheduling"] = "Zamanlama ve Bildirimler",
             ["lbl_cron"] = "Cron ifadesi (örn: 0 0 * * * ?)",
             ["lbl_error_emails"] = "Hata e-postaları (noktalı virgülle ayırın)",
             ["chk_task_enabled"] = "Görev aktif",
+            ["grp_select_task_settings"] = "Görev Seç",
+            ["grp_processing"] = "İşleme",
+            ["lbl_processing_delay"] = "İşleme gecikmesi (dosya algılandıktan sonraki saniye)",
 
             // Dashboard
             ["grp_service"] = "AdmXmlDbWorker Servisi",
@@ -111,6 +119,7 @@ public static class Localization
             ["col_filename"] = "Dosya Adı",
             ["col_status"] = "Durum",
             ["col_timestamp"] = "Zaman",
+            ["col_message"] = "Detay",
 
             // General Settings
             ["grp_smtp"] = "SMTP Ayarları (Hata Bildirimleri)",
@@ -195,6 +204,7 @@ public static class Localization
 
             // DataGrid - Mapping
             ["col_priority"] = "Priority",
+            ["col_target_table"] = "Target Table",
             ["col_column_name"] = "Column Name",
             ["col_data_type"] = "Data Type",
             ["col_xml_node"] = "XML Node",
@@ -222,10 +232,17 @@ public static class Localization
             ["btn_remove"] = "Remove",
             ["btn_move_up"] = "Up",
             ["btn_move_down"] = "Down",
+            ["grp_network_creds"] = "Network Credentials (UNC Paths)",
+            ["lbl_network_creds_info"] = "Required when Input/Output/Error paths are on a network share (\\\\server\\share)",
+            ["lbl_net_username"] = "Windows Username (e.g. DOMAIN\\user)",
+            ["lbl_net_password"] = "Password",
             ["grp_scheduling"] = "Scheduling & Notifications",
             ["lbl_cron"] = "Cron expression (e.g. 0 0 * * * ?)",
             ["lbl_error_emails"] = "Error emails (separate with semicolons)",
             ["chk_task_enabled"] = "Task enabled",
+            ["grp_select_task_settings"] = "Select Task",
+            ["grp_processing"] = "Processing",
+            ["lbl_processing_delay"] = "Processing delay (seconds after file detected)",
 
             // Dashboard
             ["grp_service"] = "AdmXmlDbWorker Service",
@@ -238,6 +255,7 @@ public static class Localization
             ["col_filename"] = "Filename",
             ["col_status"] = "Status",
             ["col_timestamp"] = "Timestamp",
+            ["col_message"] = "Details",
 
             // General Settings
             ["grp_smtp"] = "SMTP Settings (Error Notifications)",

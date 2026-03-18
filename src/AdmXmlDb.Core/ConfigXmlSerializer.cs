@@ -31,7 +31,12 @@ public static class ConfigXmlSerializer
         AppendElement(doc, root, "Server", server ?? "");
         AppendElement(doc, root, "Database", database ?? "");
         AppendElement(doc, root, "UserName", username ?? "");
-        AppendElement(doc, root, "Password", ""); // Never export decrypted password
+        try {
+            var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connStr ?? "");
+            AppendElement(doc, root, "Password", builder.Password ?? "");
+        } catch {
+            AppendElement(doc, root, "Password", "");
+        }
         AppendElement(doc, root, "TableName", task.TableName);
         AppendElement(doc, root, "MultiRecordRootXPath", task.MultiRecordRootXPath ?? "");
         AppendElement(doc, root, "TextToRemoveInXPath", task.TextToRemoveInXPath ?? "");
@@ -53,6 +58,7 @@ public static class ConfigXmlSerializer
             mappingEl.SetAttribute("ReplaceValue", m.ReplaceValue ?? "");
             mappingEl.SetAttribute("IsLiteral", m.IsLiteral.ToString());
             mappingEl.SetAttribute("ValueTemplate", m.ValueTemplate ?? "");
+            mappingEl.SetAttribute("TargetTableName", m.TargetTableName ?? "");
             mappingsEl.AppendChild(mappingEl);
         }
         root.AppendChild(mappingsEl);
@@ -127,6 +133,7 @@ public static class ConfigXmlSerializer
                     ReplaceValue = NullIfEmpty(m.Attributes?["ReplaceValue"]?.Value ?? ""),
                     IsLiteral = string.Equals(m.Attributes?["IsLiteral"]?.Value, "true", StringComparison.OrdinalIgnoreCase),
                     ValueTemplate = NullIfEmpty(m.Attributes?["ValueTemplate"]?.Value ?? ""),
+                    TargetTableName = NullIfEmpty(m.Attributes?["TargetTableName"]?.Value ?? ""),
                     SortOrder = sortOrder++
                 });
             }

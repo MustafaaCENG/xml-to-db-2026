@@ -77,7 +77,7 @@ public static class XmlParser
             try
             {
                 var node = ctx.SelectSingleNode(xpath, nsManager);
-                var value = node?.InnerText?.Trim();
+                var value = GetSafeTextValue(node);
                 result[columnName] = ConvertToTypedValue(value, dataType);
             }
             catch
@@ -101,7 +101,7 @@ public static class XmlParser
             doc.LoadXml(xmlContent);
             var nsManager = new XmlNamespaceManager(doc.NameTable);
             var node = doc.SelectSingleNode(xpath, nsManager);
-            return node?.InnerText?.Trim();
+            return GetSafeTextValue(node);
         }
         catch
         {
@@ -131,6 +131,48 @@ public static class XmlParser
 
     private static readonly Regex TemplateXPathPattern = new(@"\{(.+?)\}", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Safely extracts text from an XmlNode. If the node is a container element
+    /// (has child elements), returns only direct text content instead of the
+    /// concatenated InnerText of all descendants which would produce garbage values.
+    /// </summary>
+    private static string? GetSafeTextValue(XmlNode? node)
+    {
+        if (node == null) return null;
+
+        if (node is XmlText or XmlCDataSection or XmlAttribute or XmlComment)
+            return node.Value?.Trim();
+
+        if (node is XmlElement element)
+        {
+            bool hasChildElements = false;
+            foreach (XmlNode child in element.ChildNodes)
+            {
+                if (child is XmlElement)
+                {
+                    hasChildElements = true;
+                    break;
+                }
+            }
+
+            if (!hasChildElements)
+                return element.InnerText?.Trim();
+
+            // Container element: collect only direct text nodes to avoid
+            // returning a concatenation of all descendant values.
+            var directText = new System.Text.StringBuilder();
+            foreach (XmlNode child in element.ChildNodes)
+            {
+                if (child is XmlText or XmlCDataSection)
+                    directText.Append(child.Value);
+            }
+            var result = directText.ToString().Trim();
+            return string.IsNullOrEmpty(result) ? null : result;
+        }
+
+        return node.InnerText?.Trim();
+    }
+
     private static Dictionary<string, object?> ExtractValuesFromContext(
         XmlNode contextNode,
         XmlDocument document,
@@ -154,7 +196,7 @@ public static class XmlParser
                         try
                         {
                             var n = contextNode.SelectSingleNode(xp, nsManager);
-                            return n?.InnerText?.Trim() ?? "";
+                            return GetSafeTextValue(n) ?? "";
                         }
                         catch { return ""; }
                     });
@@ -168,7 +210,7 @@ public static class XmlParser
                 else
                 {
                     var node = contextNode.SelectSingleNode(mapping.XPath, nsManager);
-                    value = node?.InnerText?.Trim();
+                    value = GetSafeTextValue(node);
                     if (string.IsNullOrEmpty(value) && !string.IsNullOrEmpty(mapping.DefaultValue))
                         value = mapping.DefaultValue;
                 }
