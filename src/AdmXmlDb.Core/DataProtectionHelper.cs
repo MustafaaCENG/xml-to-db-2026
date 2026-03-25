@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security;
 using System.Security.Cryptography;
 
 namespace AdmXmlDb.Core;
@@ -20,6 +22,32 @@ public static class DataProtectionHelper
 
         var plainBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
         return ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.LocalMachine);
+    }
+
+    /// <summary>
+    /// Encrypts a SecureString without materializing it as a plain string in managed memory.
+    /// </summary>
+    public static byte[] Protect(SecureString secureText)
+    {
+        if (secureText == null || secureText.Length == 0)
+            return [];
+
+        var ptr = IntPtr.Zero;
+        try
+        {
+            ptr = Marshal.SecureStringToGlobalAllocUnicode(secureText);
+            var byteLen = secureText.Length * 2;
+            var plainBytes = new byte[byteLen];
+            Marshal.Copy(ptr, plainBytes, 0, byteLen);
+            var result = ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.LocalMachine);
+            Array.Clear(plainBytes, 0, plainBytes.Length);
+            return result;
+        }
+        finally
+        {
+            if (ptr != IntPtr.Zero)
+                Marshal.ZeroFreeGlobalAllocUnicode(ptr);
+        }
     }
 
     public static string Unprotect(byte[]? encryptedData)

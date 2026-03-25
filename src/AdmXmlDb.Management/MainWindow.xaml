@@ -9,6 +9,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="XML Processor" Height="800" Width="1280"
+        MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="#F0F0F0"
         WindowStyle="SingleBorderWindow"
@@ -40,7 +41,8 @@
         </Menu>
 
         <!-- Main Tab Control - Top Tabs -->
-        <TabControl Margin="4" FontSize="12">
+        <TabControl Margin="4" FontSize="12"
+                    AutomationProperties.Name="Main Navigation">
 
             <!-- ==================== TAB 1: TASK MANAGEMENT ==================== -->
             <TabItem Header="Task Management" Tag="loc:tab_task_mgmt">
@@ -54,9 +56,9 @@
                     <!-- TOP SECTION: 3 columns -->
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="210"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="280"/>
+                            <ColumnDefinition Width="210" MinWidth="180" MaxWidth="300"/>
+                            <ColumnDefinition Width="*" MinWidth="400"/>
+                            <ColumnDefinition Width="280" MinWidth="240" MaxWidth="380"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- LEFT COLUMN: Database Connection -->
@@ -214,7 +216,12 @@
                             <DataGrid x:Name="MappingsGrid" AutoGenerateColumns="False"
                                       CanUserAddRows="True" CanUserDeleteRows="True"
                                       HeadersVisibility="Column" FontSize="11"
-                                      CanUserResizeColumns="True" Background="White"
+                                      CanUserResizeColumns="True" CanUserSortColumns="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      EnableColumnVirtualization="True"
+                                      ScrollViewer.CanContentScroll="True"
+                                      Background="White"
                                       GridLinesVisibility="All"
                                       HorizontalGridLinesBrush="#D0D0D0"
                                       VerticalGridLinesBrush="#D0D0D0"
@@ -222,18 +229,18 @@
                                       RowBackground="White"
                                       BorderBrush="#ACACAC" BorderThickness="1">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Priority" Binding="{Binding SortOrder}" Width="55"/>
-                                    <DataGridTextColumn Header="Target Table" Binding="{Binding TargetTableName}" Width="130"/>
-                                    <DataGridTextColumn Header="Column Name" Binding="{Binding ColumnName}" Width="120"/>
+                                    <DataGridTextColumn Header="Priority" Binding="{Binding SortOrder}" Width="50" CanUserSort="True"/>
+                                    <DataGridTextColumn Header="Target Table" Binding="{Binding TargetTableName}" Width="1*" CanUserSort="True"/>
+                                    <DataGridTextColumn Header="Column Name" Binding="{Binding ColumnName}" Width="1*" CanUserSort="True"/>
                                     <DataGridComboBoxColumn Header="Data Type" Width="90"
                                                            SelectedItemBinding="{Binding SqlDataType}"
                                                            ItemsSource="{Binding Source={StaticResource SqlTypeEnum}}"/>
-                                    <DataGridTextColumn Header="XML Node" Binding="{Binding XPath}" Width="250"/>
-                                    <DataGridTextColumn Header="Search Term" Binding="{Binding FindValue}" Width="90"/>
-                                    <DataGridTextColumn Header="Replace With" Binding="{Binding ReplaceValue}" Width="90"/>
-                                    <DataGridTextColumn Header="XML Node Default Value" Binding="{Binding DefaultValue}" Width="140"/>
-                                    <DataGridTextColumn Header="Value Template" Binding="{Binding ValueTemplate}" Width="180"/>
-                                    <DataGridCheckBoxColumn Header="Literal" Binding="{Binding IsLiteral}" Width="55"/>
+                                    <DataGridTextColumn Header="XML Node" Binding="{Binding XPath}" Width="2*" CanUserSort="True"/>
+                                    <DataGridTextColumn Header="Search Term" Binding="{Binding FindValue}" Width="80"/>
+                                    <DataGridTextColumn Header="Replace With" Binding="{Binding ReplaceValue}" Width="80"/>
+                                    <DataGridTextColumn Header="Default Value" Binding="{Binding DefaultValue}" Width="1*"/>
+                                    <DataGridTextColumn Header="Value Template" Binding="{Binding ValueTemplate}" Width="1.5*"/>
+                                    <DataGridCheckBoxColumn Header="Literal" Binding="{Binding IsLiteral}" Width="50" CanUserSort="True"/>
                                     <DataGridTemplateColumn Width="90">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
@@ -263,15 +270,20 @@
                                           SelectionChanged="TasksCombo_SelectionChanged" Margin="0,0,8,2"
                                           materialDesign:HintAssist.Hint="Select Saved Task..."/>
                                 <TextBox x:Name="TaskName" ToolTip="Task Name" Width="140" FontSize="11" Margin="0,0,8,2"
-                                         materialDesign:HintAssist.Hint="Task name"/>
+                                         materialDesign:HintAssist.Hint="Task name"
+                                         AutomationProperties.Name="Task Name"
+                                         AutomationProperties.HelpText="Enter a unique name for this integration task"
+                                         TextChanged="TaskName_TextChanged"/>
                                 <Button Content="New" Tag="loc:btn_new" Click="AddTaskBtn_Click"
                                         Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
                                 <Button Content="Delete" Tag="loc:btn_delete" Click="DeleteTaskBtn_Click"
                                         Style="{StaticResource ClassicButton}" Margin="0,0,4,2"/>
                                 <Button Content="Save Task" Tag="loc:btn_save_task" Click="SaveTaskBtn_Click"
-                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"/>
+                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"
+                                        AutomationProperties.Name="Save Task"/>
                                 <Button Content="Save Mappings" Tag="loc:btn_save_mappings" Click="SaveMappingsBtn_Click"
-                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"/>
+                                        Style="{StaticResource PrimaryActionButton}" Margin="0,0,4,2"
+                                        AutomationProperties.Name="Save Mappings"/>
                             </StackPanel>
                         </DockPanel>
                     </Grid>
@@ -372,7 +384,10 @@
                             <StackPanel>
                                 <TextBlock Text="Cron expression (e.g. 0 0 * * * ?)" Tag="loc:lbl_cron"
                                            Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskCronExpression" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBox x:Name="TaskCronExpression" FontSize="11" Margin="0,0,0,8"
+                                         AutomationProperties.Name="Cron Expression"
+                                         AutomationProperties.HelpText="Quartz cron expression, e.g. 0 0 * * * ?"
+                                         TextChanged="TaskCronExpression_TextChanged"/>
                                 <TextBlock Text="Error emails (separate with semicolons)" Tag="loc:lbl_error_emails"
                                            Style="{StaticResource FieldLabel}"/>
                                 <TextBox x:Name="TaskErrorEmails" FontSize="11" Margin="0,0,0,8"/>
@@ -433,7 +448,7 @@
                         <Button x:Name="CleanLogsBtn" Content="Clean Old Logs (90 days)" Tag="loc:btn_clean_logs"
                                 Click="CleanLogsBtn_Click"
                                 Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="LogPageInfo" Text="Page 1" VerticalAlignment="Center" FontSize="11" Margin="12,0,0,0"/>
+                        <TextBlock x:Name="LogPageInfo" Text="Page 1 / 1 (0 records)" VerticalAlignment="Center" FontSize="11" Margin="12,0,0,0"/>
                         <Button x:Name="LogPrevBtn" Content="Previous" Tag="loc:btn_prev"
                                 Click="LogPrevBtn_Click"
                                 Style="{StaticResource VisibleTextButton}" Margin="8,0,0,0"/>
@@ -444,6 +459,11 @@
 
                     <DataGrid Grid.Row="3" x:Name="LogsGrid" AutoGenerateColumns="False" IsReadOnly="True"
                               HeadersVisibility="Column" CanUserAddRows="False" CanUserDeleteRows="False"
+                              CanUserSortColumns="True" CanUserResizeColumns="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              EnableColumnVirtualization="True"
+                              ScrollViewer.CanContentScroll="True"
                               FontSize="11" Background="White" BorderBrush="#ACACAC" BorderThickness="1"
                               GridLinesVisibility="All" HorizontalGridLinesBrush="#D0D0D0" VerticalGridLinesBrush="#D0D0D0"
                               AlternatingRowBackground="#F7F7F7" RowBackground="White"

@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdmXmlDb.Worker", "AdmXmlDb
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdmXmlDb.Management", "AdmXmlDb.Management\AdmXmlDb.Management.csproj", "{93C48BEE-9BFD-44EF-876E-071675216389}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdmXmlDb.Core.Tests", "..\AdmXmlDb.Core.Tests\AdmXmlDb.Core.Tests.csproj", "{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{93C48BEE-9BFD-44EF-876E-071675216389}.Release|x64.Build.0 = Release|Any CPU
 		{93C48BEE-9BFD-44EF-876E-071675216389}.Release|x86.ActiveCfg = Release|Any CPU
 		{93C48BEE-9BFD-44EF-876E-071675216389}.Release|x86.Build.0 = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|x64.Build.0 = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Debug|x86.Build.0 = Debug|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|x64.ActiveCfg = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|x64.Build.0 = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|x86.ActiveCfg = Release|Any CPU
+		{4F754B20-FA0C-4E1F-8E66-DB18B84C7E84}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

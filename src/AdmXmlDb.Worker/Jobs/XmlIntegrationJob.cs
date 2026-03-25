@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Mail;
 using System.Xml;
@@ -92,19 +93,35 @@ public class XmlIntegrationJob : IJob
             return;
         }
 
-        var xmlFiles = Directory.GetFiles(task.InputPath, "*.xml");
+        var xmlFiles = Directory.GetFiles(task.InputPath, "*.xml", SearchOption.AllDirectories);
         _logger.LogInformation("Task {TaskName}: Processing {Count} XML file(s) from {Path}", task.Name, xmlFiles.Length, task.InputPath);
+
+        var jobSw = Stopwatch.StartNew();
+        var successCount = 0;
+        var failCount = 0;
+
         foreach (var xmlPath in xmlFiles)
         {
+            var fileSw = Stopwatch.StartNew();
             try
             {
                 await ProcessFileAsync(db, task, xmlPath, connectionString, context.CancellationToken);
+                successCount++;
             }
             catch (Exception ex)
             {
+                failCount++;
                 _logger.LogError(ex, "Unexpected error processing {File}", xmlPath);
             }
+            finally
+            {
+                _logger.LogDebug("Task {TaskName}: File {File} processed in {ElapsedMs}ms", task.Name, Path.GetFileName(xmlPath), fileSw.ElapsedMilliseconds);
+            }
         }
+
+        jobSw.Stop();
+        _logger.LogInformation("Task {TaskName}: Job completed in {ElapsedMs}ms — Success: {Success}, Failed: {Failed}",
+            task.Name, jobSw.ElapsedMilliseconds, successCount, failCount);
 
         } // end try for UNC connections
         finally
@@ -342,6 +359,7 @@ public class XmlIntegrationJob : IJob
                 EnableSsl = smtp.UseSsl,
                 Credentials = string.IsNullOrEmpty(smtp.Username) ? null : new NetworkCredential(smtp.Username, password)
             };
+            password = null; // clear decrypted credential from memory
 
             using var mail = new MailMessage
             {

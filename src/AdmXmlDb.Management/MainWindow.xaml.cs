@@ -19,7 +19,6 @@ public partial class MainWindow : Window
 {
     private readonly string _dbPath;
     private int _currentLogPage = 0;
-    private const int LogPageSize = 50;
     private IntegrationTask? _selectedTask;
     private System.Windows.Threading.DispatcherTimer? _statusTimer;
     private string? _loadedXmlContent;
@@ -49,8 +48,15 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Could not initialize database: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _statusTimer?.Stop();
+        _statusTimer = null;
+        base.OnClosed(e);
     }
 
     // ======================== SERVICE STATUS ========================
@@ -103,33 +109,36 @@ public partial class MainWindow : Window
 
     // ======================== LOGS ========================
 
-    private void LoadLogs()
+    private async void LoadLogs()
     {
         try
         {
-            using var db = new AdmXmlDbContext(_dbPath);
-            var query = db.ExecutionLogs.AsQueryable();
+            var dbPath = _dbPath;
+            var page = _currentLogPage;
+            var filterName = (_selectedDashboardTask != null && _selectedDashboardTask.Id > 0)
+                ? _selectedDashboardTask.Name : null;
+            var pageSize = Constants.UI.LogPageSize;
 
-            if (_selectedDashboardTask != null && _selectedDashboardTask.Id > 0)
+            var (logs, total) = await Task.Run(() =>
             {
-                query = query.Where(x => x.TaskName == _selectedDashboardTask.Name);
-            }
-
-            var logs = query
-                .OrderByDescending(x => x.Timestamp)
-                .Skip(_currentLogPage * LogPageSize)
-                .Take(LogPageSize)
-                .ToList();
+                using var db = new AdmXmlDbContext(dbPath);
+                IQueryable<AdmXmlDb.Core.Entities.ExecutionLog> q = db.ExecutionLogs.AsNoTracking();
+                if (filterName != null) q = q.Where(x => x.TaskName == filterName);
+                var items = q.OrderByDescending(x => x.Timestamp)
+                    .Skip(page * pageSize).Take(pageSize).ToList();
+                var count = q.Count();
+                return (items, count);
+            });
 
             LogsGrid.ItemsSource = logs;
-            LogPageInfo.Text = $"Page {_currentLogPage + 1}";
-            LogPrevBtn.IsEnabled = _currentLogPage > 0;
-            var total = query.Count();
-            LogNextBtn.IsEnabled = (_currentLogPage + 1) * LogPageSize < total;
+            var totalPages = total == 0 ? 1 : (int)Math.Ceiling(total / (double)pageSize);
+            LogPageInfo.Text = $"Page {page + 1} / {totalPages} ({total} records)";
+            LogPrevBtn.IsEnabled = page > 0;
+            LogNextBtn.IsEnabled = (page + 1) * pageSize < total;
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error loading logs: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -159,16 +168,14 @@ public partial class MainWindow : Window
         {
             using var db = new AdmXmlDbContext(_dbPath);
             var cutoff = DateTime.UtcNow.AddDays(-90);
-            var oldLogs = db.ExecutionLogs.Where(l => l.Timestamp < cutoff).ToList();
-            db.ExecutionLogs.RemoveRange(oldLogs);
-            var count = db.SaveChanges();
+            var count = db.ExecutionLogs.Where(l => l.Timestamp < cutoff).ExecuteDelete();
             System.Windows.MessageBox.Show($"{count} old log entries deleted.", "Done");
             _currentLogPage = 0;
             LoadLogs();
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -209,14 +216,14 @@ public partial class MainWindow : Window
             smtp.UseSsl = SmtpUseSsl.IsChecked == true;
             smtp.Username = SmtpUsername.Text ?? "";
             smtp.SenderEmail = SmtpSender.Text ?? "";
-            if (!string.IsNullOrEmpty(SmtpPassword.Password))
-                smtp.EncryptedPassword = DataProtectionHelper.Protect(SmtpPassword.Password);
+            if (SmtpPassword.SecurePassword.Length > 0)
+                smtp.EncryptedPassword = DataProtectionHelper.Protect(SmtpPassword.SecurePassword);
             db.SaveChanges();
             System.Windows.MessageBox.Show("SMTP settings saved.", "Saved");
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error saving: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -260,12 +267,17 @@ public partial class MainWindow : Window
 
     // ======================== TASK LIST ========================
 
-    private void LoadTasks()
+    private async void LoadTasks()
     {
         try
         {
-            using var db = new AdmXmlDbContext(_dbPath);
-            var tasks = db.Tasks.OrderBy(t => t.Name).ToList();
+            var dbPath = _dbPath;
+            var tasks = await Task.Run(() =>
+            {
+                using var db = new AdmXmlDbContext(dbPath);
+                return db.Tasks.AsNoTracking().OrderBy(t => t.Name).ToList();
+            });
+
             TasksCombo.ItemsSource = tasks;
             if (SettingsTasksCombo != null)
                 SettingsTasksCombo.ItemsSource = tasks;
@@ -388,6 +400,7 @@ public partial class MainWindow : Window
 
         using var db = new AdmXmlDbContext(_dbPath);
         var taskWithNav = db.Tasks
+            .AsNoTracking()
             .Include(t => t.Mappings)
             .Include(t => t.TargetDirectoryComponents)
             .FirstOrDefault(t => t.Id == task.Id);
@@ -494,7 +507,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -515,7 +528,7 @@ public partial class MainWindow : Window
         TaskMultiRecord.IsChecked = false;
         TaskStaticTargetDir.Text = "";
         TargetDirComponentsList.ItemsSource = new ObservableCollection<TargetDirComponentItem>();
-        TaskCronExpression.Text = "0 0 * * * ?";
+        TaskCronExpression.Text = Constants.UI.DefaultCronExpression;
         TaskErrorEmails.Text = "";
         TaskProcessingDelay.Text = "5";
         TaskProcessingDelaySlider.Value = 5;
@@ -560,7 +573,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -1334,6 +1347,11 @@ public partial class MainWindow : Window
                 System.Windows.MessageBox.Show(_currentLang == "tr" ? "Giriş, Çıkış ve Hata klasör yolları boş bırakılamaz." : "Input, Output, and Error folder paths cannot be empty.", "Error");
                 return;
             }
+            if (ContainsPathTraversal(TaskInputPath.Text) || ContainsPathTraversal(TaskOutputPath.Text) || ContainsPathTraversal(TaskErrorPath.Text))
+            {
+                System.Windows.MessageBox.Show(_currentLang == "tr" ? "Klasör yollarında geçersiz karakter dizisi (..) kullanılamaz." : "Folder paths must not contain path traversal sequences (..).", "Error");
+                return;
+            }
             var cron = (TaskCronExpression.Text ?? "").Trim();
             if (!string.IsNullOrEmpty(cron) && !Quartz.CronExpression.IsValidExpression(cron))
             {
@@ -1342,6 +1360,7 @@ public partial class MainWindow : Window
             }
 
             using var db = new AdmXmlDbContext(_dbPath);
+            using var transaction = db.Database.BeginTransaction();
             IntegrationTask task;
             if (_selectedTask != null)
             {
@@ -1379,14 +1398,13 @@ public partial class MainWindow : Window
 
             task.TableName = _selectedTask?.TableName ?? "";
             task.CronExpression = string.IsNullOrWhiteSpace(TaskCronExpression.Text)
-                ? "0 0 * * * ?" : TaskCronExpression.Text.Trim();
+                ? Constants.UI.DefaultCronExpression : TaskCronExpression.Text.Trim();
             task.ErrorEmails = TaskErrorEmails.Text ?? "";
             task.IsEnabled = TaskIsEnabled.IsChecked == true;
             task.ProcessingDelaySeconds = int.TryParse(TaskProcessingDelay.Text, out var delaySec) && delaySec > 0 ? delaySec : 5;
             task.NetworkUsername = string.IsNullOrWhiteSpace(TaskNetworkUsername.Text) ? null : TaskNetworkUsername.Text.Trim();
-            task.EncryptedNetworkPassword = string.IsNullOrEmpty(TaskNetworkPassword.Password)
-                ? null : DataProtectionHelper.Protect(TaskNetworkPassword.Password);
-            task.StaticTargetDirectory = TaskOutputPath.Text ?? "";
+            task.EncryptedNetworkPassword = TaskNetworkPassword.SecurePassword.Length == 0
+                ? null : DataProtectionHelper.Protect(TaskNetworkPassword.SecurePassword);
 
             db.TargetDirectoryComponents.RemoveRange(task.TargetDirectoryComponents);
             task.TargetDirectoryComponents.Clear();
@@ -1403,6 +1421,7 @@ public partial class MainWindow : Window
             }
 
             db.SaveChanges();
+            transaction.Commit();
             _selectedTask = task;
             LoadTasks();
             LoadSimulationTasks();
@@ -1410,7 +1429,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -1430,6 +1449,18 @@ public partial class MainWindow : Window
             using var db = new AdmXmlDbContext(_dbPath);
             var existing = db.TaskMappings.Where(m => m.TaskId == _selectedTask.Id).ToList();
             db.TaskMappings.RemoveRange(existing);
+            var invalidXPath = items.FirstOrDefault(i =>
+                !i.IsLiteral &&
+                !string.IsNullOrWhiteSpace(i.XPath) &&
+                !IsValidXPath(i.XPath));
+            if (invalidXPath != null)
+            {
+                System.Windows.MessageBox.Show(
+                    (_currentLang == "tr" ? $"Geçersiz XPath ifadesi: {invalidXPath.XPath}" : $"Invalid XPath expression: {invalidXPath.XPath}"),
+                    "Error");
+                return;
+            }
+
             foreach (var item in items.Where(i => !string.IsNullOrWhiteSpace(i.ColumnName) &&
                 (!string.IsNullOrWhiteSpace(i.XPath) || i.IsLiteral || !string.IsNullOrWhiteSpace(i.ValueTemplate))))
             {
@@ -1453,7 +1484,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -1478,7 +1509,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
@@ -1502,18 +1533,22 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error: {ex.Message}", "Error");
+            ShowUserFriendlyError(ex);
         }
     }
 
     // ======================== SIMULATION ========================
 
-    private void LoadSimulationTasks()
+    private async void LoadSimulationTasks()
     {
         try
         {
-            using var db = new AdmXmlDbContext(_dbPath);
-            var tasks = db.Tasks.Include(t => t.Mappings).ToList();
+            var dbPath = _dbPath;
+            var tasks = await Task.Run(() =>
+            {
+                using var db = new AdmXmlDbContext(dbPath);
+                return db.Tasks.AsNoTracking().Include(t => t.Mappings).ToList();
+            });
             SimTaskCombo.ItemsSource = tasks;
         }
         catch { }
@@ -1550,8 +1585,8 @@ public partial class MainWindow : Window
     public class ParsedRecordItem
     {
         public int RowIndex { get; set; }
-        public string ColumnName { get; set; }
-        public string Value { get; set; }
+        public string ColumnName { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
     }
 
     private void ParseAndShow()
@@ -1677,7 +1712,71 @@ public partial class MainWindow : Window
 
     // ======================== LANGUAGE ========================
 
-    private string _currentLang = "tr";
+    // ======================== VALIDATION HELPERS ========================
+
+    private static bool IsValidXPath(string xpath) => InputValidator.IsValidXPath(xpath);
+
+    private static bool ContainsPathTraversal(string path) => InputValidator.ContainsPathTraversal(path);
+
+    // ======================== REAL-TIME VALIDATION ========================
+
+    private void TaskName_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.TextBox tb) return;
+        var isEmpty = string.IsNullOrWhiteSpace(tb.Text);
+        tb.BorderBrush = isEmpty
+            ? System.Windows.Media.Brushes.OrangeRed
+            : System.Windows.Media.Brushes.Gray;
+        tb.ToolTip = isEmpty
+            ? (_currentLang == "tr" ? "Görev adı zorunludur." : "Task name is required.")
+            : null;
+    }
+
+    private void TaskCronExpression_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.TextBox tb) return;
+        var cron = tb.Text.Trim();
+        if (string.IsNullOrEmpty(cron)) { tb.BorderBrush = System.Windows.Media.Brushes.Gray; tb.ToolTip = null; return; }
+        var valid = Quartz.CronExpression.IsValidExpression(cron);
+        tb.BorderBrush = valid
+            ? System.Windows.Media.Brushes.Gray
+            : System.Windows.Media.Brushes.OrangeRed;
+        tb.ToolTip = valid ? null : (_currentLang == "tr" ? "Geçersiz cron ifadesi." : "Invalid cron expression.");
+    }
+
+    // ======================== ERROR HANDLING ========================
+
+    private void ShowUserFriendlyError(Exception ex)
+    {
+        string message;
+        if (ex is SqlException sqlEx)
+        {
+            message = _currentLang == "tr"
+                ? $"Veritabanı hatası oluştu. (Kod: {sqlEx.Number})\nLütfen bağlantı ayarlarını kontrol edin."
+                : $"A database error occurred. (Code: {sqlEx.Number})\nPlease check your connection settings.";
+        }
+        else if (ex is IOException)
+        {
+            message = _currentLang == "tr"
+                ? "Dosya/klasör erişim hatası oluştu.\nKlasörün var olduğunu ve erişim izniniz olduğunu kontrol edin."
+                : "A file or folder access error occurred.\nPlease verify the path exists and you have permission.";
+        }
+        else if (ex is UnauthorizedAccessException)
+        {
+            message = _currentLang == "tr"
+                ? "Bu işlem için yetkiniz yok.\nUygulama izinlerini kontrol edin."
+                : "You do not have permission to perform this action.\nPlease check application permissions.";
+        }
+        else
+        {
+            message = _currentLang == "tr"
+                ? "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+                : "An unexpected error occurred. Please try again.";
+        }
+        System.Windows.MessageBox.Show(message, _currentLang == "tr" ? "Hata" : "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    private string _currentLang = Constants.UI.DefaultLanguage;
 
     private void MenuLang_Click(object sender, RoutedEventArgs e)
     {

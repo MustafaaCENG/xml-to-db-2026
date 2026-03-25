@@ -74,7 +74,16 @@ public static class TargetPathBuilder
     {
         var dir = BuildTargetDirectory(xmlContent, task) ?? task.OutputPath;
         var prefix = task.PrependToFileName ?? "";
-        var finalName = prefix + fileName;
+        var baseName = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+
+        if (task.AddDateTimeToFileName)
+        {
+            var timestamp = DateTime.Now.ToString(Constants.UI.DateTimeFileNameFormat);
+            baseName = $"{baseName}_{timestamp}";
+        }
+
+        var finalName = prefix + baseName + (task.FileNameSuffix ?? "") + extension;
         return Path.Combine(dir, finalName);
     }
 

@@ -82,4 +82,13 @@ public static class Constants
     }
 
     public const string ServiceName = "AdmXmlDbWorker";
+
+    public static class UI
+    {
+        public const int LogPageSize = 50;
+        public const int MaxProcessingDelaySec = 300;
+        public const string DefaultCronExpression = "0 0 * * * ?";
+        public const string DateTimeFileNameFormat = "yyyyMMdd_HHmmss";
+        public const string DefaultLanguage = "tr";
+    }
 }

@@ -200,7 +200,7 @@ public class InputFolderWatcherHostedService : IHostedService, IDisposable
             try
             {
                 var (taskIds, delaySec) = info;
-                var watcher = new FileSystemWatcher(path) { Filter = "*.xml", NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite };
+                var watcher = new FileSystemWatcher(path) { Filter = "*.xml", NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite, IncludeSubdirectories = true };
                 watcher.Created += (_, e) => OnFileCreated(path, taskIds, e.FullPath, delaySec);
                 watcher.Changed += (_, e) => OnFileCreated(path, taskIds, e.FullPath, delaySec);
                 watcher.EnableRaisingEvents = true;
