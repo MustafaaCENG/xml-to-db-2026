@@ -221,10 +221,24 @@ public static class XmlParser
                 if (!string.IsNullOrEmpty(mapping.FindValue) && mapping.ReplaceValue != null)
                     value = value?.Replace(mapping.FindValue, mapping.ReplaceValue);
 
-                result[mapping.ColumnName] = ConvertToTypedValue(value, mapping.SqlDataType);
+                var typedValue = ConvertToTypedValue(value, mapping.SqlDataType);
+
+                if (mapping.IsRequired && (typedValue == null || typedValue is DBNull))
+                    throw new InvalidOperationException(
+                        $"Required field '{mapping.ColumnName}' has no value in the XML.");
+
+                result[mapping.ColumnName] = typedValue;
+            }
+            catch (InvalidOperationException)
+            {
+                throw; // propagate required-field violations as-is
             }
             catch
             {
+                if (mapping.IsRequired)
+                    throw new InvalidOperationException(
+                        $"Required field '{mapping.ColumnName}' could not be extracted from the XML.");
+
                 result[mapping.ColumnName] = mapping.DefaultValue != null
                     ? ConvertToTypedValue(mapping.DefaultValue, mapping.SqlDataType)
                     : DBNull.Value;

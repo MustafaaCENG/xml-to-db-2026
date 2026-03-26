@@ -58,4 +58,10 @@ public class TaskMapping
     /// </summary>
     [MaxLength(200)]
     public string? TargetTableName { get; set; }
+
+    /// <summary>
+    /// When true, the extracted value must be non-null and non-empty.
+    /// If the value is missing the file is rejected and moved to the error folder.
+    /// </summary>
+    public bool IsRequired { get; set; }
 }

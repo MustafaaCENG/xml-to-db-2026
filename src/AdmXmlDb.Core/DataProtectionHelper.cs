@@ -26,6 +26,8 @@ public static class DataProtectionHelper
 
     /// <summary>
     /// Encrypts a SecureString without materializing it as a plain string in managed memory.
+    /// Converts UTF-16LE (native SecureString encoding) to UTF-8 before encrypting so that
+    /// Unprotect() — which always decodes as UTF-8 — returns the correct value.
     /// </summary>
     public static byte[] Protect(SecureString secureText)
     {
@@ -33,20 +35,27 @@ public static class DataProtectionHelper
             return [];
 
         var ptr = IntPtr.Zero;
+        byte[]? utf16Bytes = null;
+        byte[]? utf8Bytes = null;
         try
         {
             ptr = Marshal.SecureStringToGlobalAllocUnicode(secureText);
-            var byteLen = secureText.Length * 2;
-            var plainBytes = new byte[byteLen];
-            Marshal.Copy(ptr, plainBytes, 0, byteLen);
-            var result = ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.LocalMachine);
-            Array.Clear(plainBytes, 0, plainBytes.Length);
-            return result;
+            utf16Bytes = new byte[secureText.Length * 2];
+            Marshal.Copy(ptr, utf16Bytes, 0, utf16Bytes.Length);
+
+            // Convert UTF-16LE → UTF-8 so Unprotect() decodes correctly
+            utf8Bytes = System.Text.Encoding.Convert(
+                System.Text.Encoding.Unicode,
+                System.Text.Encoding.UTF8,
+                utf16Bytes);
+
+            return ProtectedData.Protect(utf8Bytes, Entropy, DataProtectionScope.LocalMachine);
         }
         finally
         {
-            if (ptr != IntPtr.Zero)
-                Marshal.ZeroFreeGlobalAllocUnicode(ptr);
+            if (utf16Bytes != null) Array.Clear(utf16Bytes, 0, utf16Bytes.Length);
+            if (utf8Bytes  != null) Array.Clear(utf8Bytes,  0, utf8Bytes.Length);
+            if (ptr != IntPtr.Zero) Marshal.ZeroFreeGlobalAllocUnicode(ptr);
         }
     }
 

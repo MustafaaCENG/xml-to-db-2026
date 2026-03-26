@@ -60,13 +60,13 @@ public static class SchemaMigrator
 
     private static void AddTaskMappingColumns(SqliteConnection conn)
     {
-        var columns = new[] { "DefaultValue", "FindValue", "ReplaceValue", "SortOrder", "IsLiteral", "ValueTemplate", "TargetTableName" };
+        var columns = new[] { "DefaultValue", "FindValue", "ReplaceValue", "SortOrder", "IsLiteral", "ValueTemplate", "TargetTableName", "IsRequired" };
         foreach (var col in columns)
         {
             if (ColumnExists(conn, "TaskMappings", col))
                 continue;
             using var cmd = conn.CreateCommand();
-            var sqlType = col is "SortOrder" or "IsLiteral" ? "INTEGER NOT NULL DEFAULT 0" : "TEXT";
+            var sqlType = col is "SortOrder" or "IsLiteral" or "IsRequired" ? "INTEGER NOT NULL DEFAULT 0" : "TEXT";
             cmd.CommandText = $"ALTER TABLE TaskMappings ADD COLUMN {col} {sqlType}";
             try { cmd.ExecuteNonQuery(); } catch { }
         }

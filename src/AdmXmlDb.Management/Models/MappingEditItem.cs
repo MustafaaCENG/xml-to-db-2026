@@ -77,6 +77,13 @@ public class MappingEditItem : INotifyPropertyChanged
         set { _targetTableName = value; OnPropertyChanged(nameof(TargetTableName)); }
     }
 
+    private bool _isRequired;
+    public bool IsRequired
+    {
+        get => _isRequired;
+        set { _isRequired = value; OnPropertyChanged(nameof(IsRequired)); }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

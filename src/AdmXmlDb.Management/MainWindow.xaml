@@ -26,17 +26,24 @@
         <!-- Top Menu Bar -->
         <Menu DockPanel.Dock="Top" Background="#F0F0F0" FontSize="12">
             <MenuItem Header="_File" Tag="loc:menu_file">
-                <MenuItem Header="Save Config" Tag="loc:menu_config_save" x:Name="MenuConfigSave" Click="ConfigSaveBtn_Click"/>
-                <MenuItem Header="Load Config" Tag="loc:menu_config_load" x:Name="MenuConfigLoad" Click="ConfigLoadBtn_Click"/>
+                <MenuItem Header="Save Config" Tag="loc:menu_config_save" x:Name="MenuConfigSave" Click="ConfigSaveBtn_Click" InputGestureText="Ctrl+E"/>
+                <MenuItem Header="Load Config" Tag="loc:menu_config_load" x:Name="MenuConfigLoad" Click="ConfigLoadBtn_Click" InputGestureText="Ctrl+L"/>
                 <Separator/>
-                <MenuItem Header="Exit" Tag="loc:menu_exit" Click="MenuExit_Click"/>
+                <MenuItem Header="New Task"  Tag="loc:btn_new"    Click="AddTaskBtn_Click"    InputGestureText="Ctrl+N"/>
+                <MenuItem Header="Save Task" Tag="loc:btn_save_task" Click="SaveTaskBtn_Click" InputGestureText="Ctrl+S"/>
+                <Separator/>
+                <MenuItem Header="Exit" Tag="loc:menu_exit" Click="MenuExit_Click" InputGestureText="Alt+F4"/>
+            </MenuItem>
+            <MenuItem Header="_View" Tag="loc:menu_view">
+                <MenuItem Header="Refresh Logs" Tag="loc:btn_refresh_logs" Click="RefreshLogsBtn_Click" InputGestureText="F5"/>
+                <MenuItem Header="Refresh Status" Tag="loc:btn_refresh" Click="RefreshStatusBtn_Click" InputGestureText="F6"/>
             </MenuItem>
             <MenuItem Header="_Language" Tag="loc:menu_language">
                 <MenuItem Header="Türkçe" x:Name="MenuLangTr" Click="MenuLang_Click" Tag="tr" IsCheckable="True" IsChecked="True"/>
                 <MenuItem Header="English" x:Name="MenuLangEn" Click="MenuLang_Click" Tag="en" IsCheckable="True"/>
             </MenuItem>
             <MenuItem Header="_Help" Tag="loc:menu_help">
-                <MenuItem Header="About" Tag="loc:menu_about" Click="MenuAbout_Click"/>
+                <MenuItem Header="About" Tag="loc:menu_about" Click="MenuAbout_Click" InputGestureText="F1"/>
             </MenuItem>
         </Menu>
 
@@ -53,13 +60,18 @@
                         <RowDefinition Height="*" MinHeight="150"/>
                     </Grid.RowDefinitions>
 
-                    <!-- TOP SECTION: 3 columns -->
+                    <!-- TOP SECTION: 3 columns + 2 splitters -->
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="210" MinWidth="180" MaxWidth="300"/>
-                            <ColumnDefinition Width="*" MinWidth="400"/>
-                            <ColumnDefinition Width="280" MinWidth="240" MaxWidth="380"/>
+                            <ColumnDefinition Width="210" MinWidth="160"/>
+                            <ColumnDefinition Width="5"/>
+                            <ColumnDefinition Width="*" MinWidth="350"/>
+                            <ColumnDefinition Width="280" MinWidth="200"/>
                         </Grid.ColumnDefinitions>
+
+                        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch" Background="#ACACAC"
+                                      ShowsPreview="True" Cursor="SizeWE"/>
 
                         <!-- LEFT COLUMN: Database Connection -->
                         <GroupBox Grid.Column="0" Header="Database Connection" Tag="loc:grp_db_connection"
@@ -93,7 +105,8 @@
 
                                     <Button Content="Connect" Tag="loc:btn_connect" x:Name="TaskDbConnectBtn"
                                             Click="TaskDbConnectBtn_Click"
-                                            Style="{StaticResource ClassicButton}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                                            Style="{StaticResource ClassicButton}" HorizontalAlignment="Right" Margin="0,0,0,6"
+                                            ToolTip="Connect to the server and list available databases"/>
 
                                     <TextBlock Text="Databases" Tag="loc:lbl_databases" Style="{StaticResource FieldLabel}" FontWeight="SemiBold"/>
                                     <ComboBox x:Name="DatabasesCombo" FontSize="11" Margin="0,0,0,6"
@@ -114,13 +127,15 @@
                         </GroupBox>
 
                         <!-- CENTER COLUMN: Load XML + XML View + Tree View -->
-                        <DockPanel Grid.Column="1" Margin="4,0,4,0">
+                        <DockPanel Grid.Column="2" Margin="4,0,4,0">
                             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
                                 <Button Content="Load XML" Tag="loc:btn_load_xml" x:Name="LoadTaskXmlBtn"
                                         Click="LoadTaskXmlBtn_Click"
-                                        Style="{StaticResource ClassicButton}" Margin="0,0,8,0"/>
+                                        Style="{StaticResource ClassicButton}" Margin="0,0,8,0"
+                                        ToolTip="Load a sample XML file to explore its structure and build mappings"/>
                                 <CheckBox x:Name="TaskMultiRecord" Content="Has more than one document node"
-                                          Tag="loc:chk_multi_record" FontSize="11" VerticalAlignment="Center"/>
+                                          Tag="loc:chk_multi_record" FontSize="11" VerticalAlignment="Center"
+                                          ToolTip="Check if the XML file contains multiple records under a root element&#x0a;e.g. &lt;Records&gt;&lt;Record&gt;...&lt;/Record&gt;&lt;/Records&gt;"/>
                             </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -140,7 +155,8 @@
                                         <Button x:Name="AddToMappingBtn" DockPanel.Dock="Bottom"
                                                 Content="Add to Mapping" Tag="loc:btn_add_mapping" FontSize="11"
                                                 Click="AddToMappingBtn_Click" Style="{StaticResource PrimaryActionButton}"
-                                                HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                                                HorizontalAlignment="Left" Margin="0,4,0,0"
+                                                ToolTip="Add checked tree nodes to mapping grid.&#x0a;Check multiple nodes for combined template mode."/>
                                         <TreeView x:Name="XmlTreeView" FontSize="11" Background="White"
                                                   BorderThickness="0"
                                                   SelectedItemChanged="XmlTreeView_SelectedItemChanged"/>
@@ -150,7 +166,7 @@
                         </DockPanel>
 
                         <!-- RIGHT COLUMN: Input / Output / Error / Preview -->
-                        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        <ScrollViewer Grid.Column="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                       Margin="4,0,0,0">
                             <StackPanel>
                                 <GroupBox Header="Input" Tag="loc:grp_input" Style="{StaticResource ClassicGroupBox}" Padding="4">
@@ -162,7 +178,7 @@
                                 </GroupBox>
 
                                 <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,2,0,0"/>
-                                <TextBlock x:Name="InputPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                <TextBlock x:Name="InputPreview" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,4"
                                            TextTrimming="CharacterEllipsis"/>
 
                                 <GroupBox Header="Output" Tag="loc:grp_output" Style="{StaticResource ClassicGroupBox}" Padding="4">
@@ -183,7 +199,7 @@
                                 </StackPanel>
 
                                 <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,0,0,0"/>
-                                <TextBlock x:Name="OutputPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                <TextBlock x:Name="OutputPreview" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,4"
                                            TextWrapping="Wrap"/>
 
                                 <GroupBox Header="Error" Tag="loc:grp_error" Style="{StaticResource ClassicGroupBox}" Padding="4">
@@ -195,7 +211,7 @@
                                 </GroupBox>
 
                                 <TextBlock Text="Preview:" Tag="loc:lbl_preview" Style="{StaticResource FieldLabel}" Margin="6,2,0,0"/>
-                                <TextBlock x:Name="ErrorPreview" FontSize="10" Foreground="#666" Margin="6,0,0,4"
+                                <TextBlock x:Name="ErrorPreview" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,4"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                         </ScrollViewer>
@@ -241,6 +257,7 @@
                                     <DataGridTextColumn Header="Default Value" Binding="{Binding DefaultValue}" Width="1*"/>
                                     <DataGridTextColumn Header="Value Template" Binding="{Binding ValueTemplate}" Width="1.5*"/>
                                     <DataGridCheckBoxColumn Header="Literal" Binding="{Binding IsLiteral}" Width="50" CanUserSort="True"/>
+                                    <DataGridCheckBoxColumn Header="Required" Binding="{Binding IsRequired}" Width="60" CanUserSort="True"/>
                                     <DataGridTemplateColumn Width="90">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
@@ -293,109 +310,232 @@
             <!-- ==================== TAB 2: TASK SETTINGS ==================== -->
             <TabItem Header="Task Settings" Tag="loc:tab_task_settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="4">
-                    <StackPanel MaxWidth="600">
-                        <GroupBox Header="Select Task" Tag="loc:grp_select_task_settings" Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,4">
+                    <StackPanel>
+                        <!-- Task selector — full width -->
+                        <GroupBox Header="Select Task" Tag="loc:grp_select_task_settings"
+                                  Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Task:" Tag="loc:lbl_task_label" VerticalAlignment="Center" FontSize="12"
-                                           FontWeight="Bold" Margin="0,0,8,0"/>
-                                <ComboBox x:Name="SettingsTasksCombo" Width="280" FontSize="11" DisplayMemberPath="Name"
+                                <TextBlock Text="Task:" Tag="loc:lbl_task_label" VerticalAlignment="Center"
+                                           FontSize="12" FontWeight="Bold" Margin="0,0,8,0"/>
+                                <ComboBox x:Name="SettingsTasksCombo" Width="320" FontSize="11" DisplayMemberPath="Name"
                                           SelectionChanged="SettingsTasksCombo_SelectionChanged"
                                           materialDesign:HintAssist.Hint="Select Task..."/>
                             </StackPanel>
                         </GroupBox>
 
-                    <StackPanel x:Name="TaskSettingsContainer" IsEnabled="False">
-                        <GroupBox Header="Folder Paths" Tag="loc:grp_folder_paths" Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <TextBlock Text="File name prefix (appended to output file name)"
-                                           Tag="loc:lbl_prepend" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskPrependToFileName" FontSize="11" Margin="0,0,0,8"/>
-                            </StackPanel>
-                        </GroupBox>
+                        <!-- 2-column layout for settings -->
+                        <Grid x:Name="TaskSettingsContainer" IsEnabled="False">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <GroupBox Header="Network Credentials (UNC Paths)" Tag="loc:grp_network_creds" Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <TextBlock Text="Required when Input/Output/Error paths are on a network share (\\server\share)"
-                                           Tag="loc:lbl_network_creds_info" Style="{StaticResource FieldLabel}"
-                                           Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                <TextBlock Text="Windows Username (e.g. DOMAIN\user)" Tag="loc:lbl_net_username"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskNetworkUsername" FontSize="11" Margin="0,0,0,4"/>
-                                <TextBlock Text="Password" Tag="loc:lbl_net_password" Style="{StaticResource FieldLabel}"/>
-                                <PasswordBox x:Name="TaskNetworkPassword" FontSize="11" Margin="0,0,0,4"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <GroupBox Header="Target Directory" Tag="loc:grp_target_dir" Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <TextBlock Text="Static base directory (= Output path)" Tag="loc:lbl_static_base"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskStaticTargetDir" FontSize="11" Margin="0,0,0,8"
-                                         IsReadOnly="True" Background="#F0F0F0"/>
-                                <TextBlock Text="Dynamic target path components" Tag="loc:lbl_dynamic_comp"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <ListBox x:Name="TargetDirComponentsList" DisplayMemberPath="DisplayValue"
-                                         FontSize="11" MaxHeight="80" BorderBrush="#ACACAC" BorderThickness="1"
-                                         Margin="0,0,0,4"/>
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TargetDirStaticInput" FontSize="11" Margin="0,0,4,0"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                        <Button Content="Add XPath" Tag="loc:btn_add_xpath" Click="TargetDirAddXPath_Click"
-                                                Style="{StaticResource ClassicButton}" Margin="0,0,4,0"/>
-                                        <Button Content="Add Static" Tag="loc:btn_add_static" Click="TargetDirAddStatic_Click"
-                                                Style="{StaticResource ClassicButton}" Margin="0,0,4,0"/>
-                                        <Button Content="Remove" Tag="loc:btn_remove" Click="TargetDirRemove_Click"
-                                                Style="{StaticResource ClassicButton}"/>
+                            <!-- LEFT COLUMN -->
+                            <StackPanel Grid.Column="0">
+                                <GroupBox Header="Folder Paths" Tag="loc:grp_folder_paths"
+                                          Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="File name prefix (appended to output file name)"
+                                                   Tag="loc:lbl_prepend" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TaskPrependToFileName" FontSize="11" Margin="0,0,0,8"/>
                                     </StackPanel>
-                                </Grid>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Up" Tag="loc:btn_move_up" Click="TargetDirMoveUp_Click"
-                                            Style="{StaticResource VisibleTextButton}" Margin="0,0,4,0"/>
-                                    <Button Content="Down" Tag="loc:btn_move_down" Click="TargetDirMoveDown_Click"
-                                            Style="{StaticResource VisibleTextButton}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </GroupBox>
+                                </GroupBox>
 
-                        <GroupBox Header="Processing" Tag="loc:grp_processing" Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <TextBlock Text="Processing delay (seconds after file detected)"
-                                           Tag="loc:lbl_processing_delay" Style="{StaticResource FieldLabel}"/>
-                                <Grid Margin="0,0,0,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TaskProcessingDelay" FontSize="11" Text="5" VerticalAlignment="Center"/>
-                                    <Slider x:Name="TaskProcessingDelaySlider" Grid.Column="1" Minimum="1" Maximum="120"
-                                            Value="5" IsSnapToTickEnabled="True" TickFrequency="1"
-                                            TickPlacement="BottomRight" Margin="8,0,0,0"
-                                            ValueChanged="TaskProcessingDelaySlider_ValueChanged"/>
-                                </Grid>
-                            </StackPanel>
-                        </GroupBox>
+                                <GroupBox Header="Network Credentials (UNC Paths)" Tag="loc:grp_network_creds"
+                                          Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="Required when Input/Output/Error paths are on a network share (\\server\share)"
+                                                   Tag="loc:lbl_network_creds_info" Style="{StaticResource FieldLabel}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Windows Username (e.g. DOMAIN\user)" Tag="loc:lbl_net_username"
+                                                   Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TaskNetworkUsername" FontSize="11" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Password" Tag="loc:lbl_net_password"
+                                                   Style="{StaticResource FieldLabel}"/>
+                                        <PasswordBox x:Name="TaskNetworkPassword" FontSize="11"/>
+                                    </StackPanel>
+                                </GroupBox>
 
-                        <GroupBox Header="Scheduling &amp; Notifications" Tag="loc:grp_scheduling"
-                                  Style="{StaticResource ClassicGroupBox}">
-                            <StackPanel>
-                                <TextBlock Text="Cron expression (e.g. 0 0 * * * ?)" Tag="loc:lbl_cron"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskCronExpression" FontSize="11" Margin="0,0,0,8"
-                                         AutomationProperties.Name="Cron Expression"
-                                         AutomationProperties.HelpText="Quartz cron expression, e.g. 0 0 * * * ?"
-                                         TextChanged="TaskCronExpression_TextChanged"/>
-                                <TextBlock Text="Error emails (separate with semicolons)" Tag="loc:lbl_error_emails"
-                                           Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="TaskErrorEmails" FontSize="11" Margin="0,0,0,8"/>
-                                <CheckBox x:Name="TaskIsEnabled" Visibility="Visible" Content="Task enabled" Tag="loc:chk_task_enabled"
-                                          IsChecked="True" FontSize="11"/>
+                                <GroupBox Header="Processing" Tag="loc:grp_processing"
+                                          Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="Processing delay (seconds after file detected)"
+                                                   Tag="loc:lbl_processing_delay" Style="{StaticResource FieldLabel}"/>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="56"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="TaskProcessingDelay" FontSize="11" Text="5"
+                                                     VerticalAlignment="Center"
+                                                     TextChanged="TaskProcessingDelay_TextChanged"
+                                                     ToolTip="1–120 seconds. How long to wait after a file is detected before processing (avoids locked files)."/>
+                                            <Slider x:Name="TaskProcessingDelaySlider" Grid.Column="1"
+                                                    Minimum="1" Maximum="120" Value="5"
+                                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                                    TickPlacement="BottomRight" Margin="8,0,0,0"
+                                                    ValueChanged="TaskProcessingDelaySlider_ValueChanged"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <GroupBox Header="Scheduling &amp; Notifications" Tag="loc:grp_scheduling"
+                                          Style="{StaticResource ClassicGroupBox}">
+                                    <StackPanel>
+                                        <TextBlock Text="Cron expression (e.g. 0 0 * * * ?)" Tag="loc:lbl_cron"
+                                                   Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TaskCronExpression" FontSize="11" Margin="0,0,0,8"
+                                                 TextChanged="TaskCronExpression_TextChanged"
+                                                 ToolTip="Quartz format: sec min hr day month weekday&#x0a;Every hour:   0 0 * * * ?&#x0a;Every 30 min: 0 0/30 * * * ?&#x0a;Every day 8am: 0 0 8 * * ?"/>
+                                        <TextBlock Text="Error emails (separate with semicolons)"
+                                                   Tag="loc:lbl_error_emails" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TaskErrorEmails" FontSize="11" Margin="0,0,0,8"
+                                                 ToolTip="Semicolon-separated email addresses&#x0a;e.g. ali@firma.com;veli@firma.com"/>
+                                        <CheckBox x:Name="TaskIsEnabled" Content="Task enabled"
+                                                  Tag="loc:chk_task_enabled" IsChecked="True" FontSize="11"/>
+                                    </StackPanel>
+                                </GroupBox>
                             </StackPanel>
-                        </GroupBox>
-                    </StackPanel>
+
+                            <!-- RIGHT COLUMN: Target Directory tree builder -->
+                            <StackPanel Grid.Column="2">
+                                <GroupBox Header="Target Directory" Tag="loc:grp_target_dir"
+                                          Style="{StaticResource ClassicGroupBox}">
+                                    <StackPanel>
+                                        <TextBlock Text="Static base directory (= Output path)"
+                                                   Tag="loc:lbl_static_base" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="TaskStaticTargetDir" FontSize="11" Margin="0,0,0,8"
+                                                 IsReadOnly="True" Background="#F0F0F0"
+                                                 ToolTip="Automatically mirrors the Output path"/>
+
+                                        <TextBlock Text="Dynamic subdirectory components"
+                                                   Tag="loc:lbl_dynamic_comp" Style="{StaticResource FieldLabel}"/>
+
+                                        <!-- Tree-like path visualiser -->
+                                        <Border BorderBrush="#C8C8C8" BorderThickness="1"
+                                                Background="White" Margin="0,4,0,6" Padding="6,4">
+                                            <StackPanel>
+                                                <!-- Root node -->
+                                                <DockPanel Margin="0,0,0,4">
+                                                    <TextBlock DockPanel.Dock="Left" Text="📁 "
+                                                               FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding ElementName=TaskStaticTargetDir, Path=Text}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" Foreground="#333333"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding ElementName=TaskStaticTargetDir, Path=Text}"/>
+                                                </DockPanel>
+                                                <Rectangle Height="1" Fill="#E0E0E0" Margin="0,0,0,4"/>
+
+                                                <!-- Component rows -->
+                                                <ItemsControl x:Name="TargetDirComponentsList">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,1" Padding="2,3"
+                                                                    Background="Transparent">
+                                                                <DockPanel>
+                                                                    <!-- Tree indent -->
+                                                                    <TextBlock DockPanel.Dock="Left"
+                                                                               Text="  └ "
+                                                                               FontFamily="Consolas"
+                                                                               FontSize="10"
+                                                                               Foreground="#BBBBBB"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <!-- Inline buttons -->
+                                                                    <StackPanel DockPanel.Dock="Right"
+                                                                                Orientation="Horizontal">
+                                                                        <Button Content="▲"
+                                                                                Tag="{Binding}"
+                                                                                Click="TargetDirMoveUp_Click"
+                                                                                FontSize="9" Padding="5,1"
+                                                                                Margin="2,0,0,0"
+                                                                                Style="{StaticResource ClassicButton}"/>
+                                                                        <Button Content="▼"
+                                                                                Tag="{Binding}"
+                                                                                Click="TargetDirMoveDown_Click"
+                                                                                FontSize="9" Padding="5,1"
+                                                                                Margin="2,0,0,0"
+                                                                                Style="{StaticResource ClassicButton}"/>
+                                                                        <Button Content="✕"
+                                                                                Tag="{Binding}"
+                                                                                Click="TargetDirRemove_Click"
+                                                                                FontSize="9" Padding="5,1"
+                                                                                Margin="2,0,0,0"
+                                                                                Style="{StaticResource ClassicButton}"
+                                                                                Foreground="#C50F1F"/>
+                                                                    </StackPanel>
+                                                                    <!-- Type badge -->
+                                                                    <Border CornerRadius="2" Padding="4,1"
+                                                                            Margin="0,0,6,0"
+                                                                            VerticalAlignment="Center">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Background" Value="#E5F3FF"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding ComponentType}"
+                                                                                                 Value="Static">
+                                                                                        <Setter Property="Background" Value="#F0F0F0"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock FontSize="9"
+                                                                                   FontWeight="SemiBold"
+                                                                                   VerticalAlignment="Center">
+                                                                            <TextBlock.Style>
+                                                                                <Style TargetType="TextBlock">
+                                                                                    <Setter Property="Text" Value="XPath"/>
+                                                                                    <Setter Property="Foreground" Value="#0078D7"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding ComponentType}"
+                                                                                                     Value="Static">
+                                                                                            <Setter Property="Text" Value="Static"/>
+                                                                                            <Setter Property="Foreground" Value="#555555"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </TextBlock.Style>
+                                                                        </TextBlock>
+                                                                    </Border>
+                                                                    <!-- Value -->
+                                                                    <TextBlock Text="{Binding Value}"
+                                                                               FontSize="11"
+                                                                               VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"
+                                                                               ToolTip="{Binding Value}"/>
+                                                                </DockPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Add component row -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="TargetDirStaticInput" FontSize="11"
+                                                     Margin="0,0,6,0"
+                                                     materialDesign:HintAssist.Hint="XPath or static folder name..."/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <Button Content="+ XPath" Tag="loc:btn_add_xpath"
+                                                        Click="TargetDirAddXPath_Click"
+                                                        Style="{StaticResource ClassicButton}"
+                                                        Margin="0,0,4,0"/>
+                                                <Button Content="+ Static" Tag="loc:btn_add_static"
+                                                        Click="TargetDirAddStatic_Click"
+                                                        Style="{StaticResource ClassicButton}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </GroupBox>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -429,7 +569,7 @@
                             <ComboBox x:Name="DashboardTasksCombo" Width="200" FontSize="11" DisplayMemberPath="Name"
                                       SelectionChanged="DashboardTasksCombo_SelectionChanged" Margin="0,0,16,0"
                                       materialDesign:HintAssist.Hint="Select Task..."/>
-                            <Border x:Name="DashboardTaskStatusBorder" Background="#E0E0E0" CornerRadius="3" Padding="6,3" Visibility="Collapsed">
+                            <Border x:Name="DashboardTaskStatusBorder" Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="6,3" Visibility="Collapsed">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Ellipse x:Name="DashboardTaskStatusLight" Width="10" Height="10" Fill="Gray" Margin="0,0,6,0"/>
                                     <TextBlock x:Name="DashboardTaskStatusText" Text="Unknown" FontSize="12" FontWeight="SemiBold" Margin="0,0,8,0"/>
@@ -489,32 +629,85 @@
             <!-- ==================== TAB 4: GENERAL SETTINGS ==================== -->
             <TabItem Header="General Settings" Tag="loc:tab_general_settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
-                    <StackPanel HorizontalAlignment="Center" MaxWidth="450">
+                    <StackPanel>
+
+                        <!-- Interface Language -->
+                        <GroupBox Header="Interface Language / Arayüz Dili" Tag="loc:grp_language"
+                                  Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="LangTrRadio" Content="Türkçe" Tag="tr"
+                                             FontSize="12" GroupName="SettingsLang" Margin="0,0,20,0"
+                                             Click="MenuLang_Click"/>
+                                <RadioButton x:Name="LangEnRadio" Content="English" Tag="en"
+                                             FontSize="12" GroupName="SettingsLang"
+                                             Click="MenuLang_Click"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- SMTP -->
                         <GroupBox Header="SMTP Settings (Error Notifications)" Tag="loc:grp_smtp"
-                                  Style="{StaticResource ClassicGroupBox}">
+                                  Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Text="SMTP Host" Tag="loc:lbl_smtp_host" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="SmtpHost" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBox x:Name="SmtpHost" FontSize="11" Margin="0,0,0,8"
+                                         ToolTip="SMTP server address, e.g. smtp.gmail.com or mail.firma.com"/>
                                 <TextBlock Text="Port" Tag="loc:lbl_port" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="SmtpPort" Text="587" FontSize="11" Margin="0,0,0,8"/>
-                                <CheckBox x:Name="SmtpUseSsl" Content="Use SSL" Tag="loc:chk_use_ssl"
-                                          FontSize="11" Margin="0,0,0,8"/>
+                                <TextBox x:Name="SmtpPort" Text="587" FontSize="11" Margin="0,0,0,8"
+                                         ToolTip="Common ports: 25 (SMTP), 465 (SSL), 587 (TLS/STARTTLS)"/>
+                                <CheckBox x:Name="SmtpUseSsl" Content="Use SSL/TLS" Tag="loc:chk_use_ssl"
+                                          FontSize="11" Margin="0,0,0,8"
+                                          ToolTip="Enable for port 465 (SSL) or 587 (STARTTLS)"/>
                                 <TextBlock Text="Username" Tag="loc:lbl_smtp_username" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="SmtpUsername" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBox x:Name="SmtpUsername" FontSize="11" Margin="0,0,0,8"
+                                         ToolTip="Leave empty for anonymous SMTP relay"/>
                                 <TextBlock Text="Password" Tag="loc:lbl_smtp_password" Style="{StaticResource FieldLabel}"/>
-                                <PasswordBox x:Name="SmtpPassword" FontSize="11" Margin="0,0,0,8"/>
+                                <PasswordBox x:Name="SmtpPassword" FontSize="11" Margin="0,0,0,8"
+                                             AutomationProperties.Name="SMTP Password"/>
                                 <TextBlock Text="Sender Email" Tag="loc:lbl_sender" Style="{StaticResource FieldLabel}"/>
-                                <TextBox x:Name="SmtpSender" FontSize="11" Margin="0,0,0,12"/>
+                                <TextBox x:Name="SmtpSender" FontSize="11" Margin="0,0,0,12"
+                                         ToolTip="From address for error notification emails"/>
                                 <StackPanel Orientation="Horizontal">
                                     <Button x:Name="SaveSmtpBtn" Content="Save" Tag="loc:btn_save"
                                             Click="SaveSmtpBtn_Click"
-                                            Style="{StaticResource PrimaryActionButton}" Margin="0,0,8,0"/>
+                                            Style="{StaticResource PrimaryActionButton}" Margin="0,0,8,0"
+                                            ToolTip="Save SMTP settings (password is encrypted with Windows DPAPI)"/>
                                     <Button x:Name="TestSmtpBtn" Content="Test Connection" Tag="loc:btn_test_conn"
                                             Click="TestSmtpBtn_Click"
-                                            Style="{StaticResource ClassicButton}"/>
+                                            Style="{StaticResource ClassicButton}"
+                                            ToolTip="Send a test email to the Sender address to verify SMTP configuration"/>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
+
+                        <!-- Log Retention -->
+                        <GroupBox Header="Log Retention" Tag="loc:grp_log_retention"
+                                  Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Logs older than 90 days are deleted when you click Clean."
+                                           Tag="loc:lbl_log_retention_info"
+                                           Style="{StaticResource FieldLabel}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <Button Content="Clean Old Logs (90 days)" Tag="loc:btn_clean_logs"
+                                        Click="CleanLogsBtn_Click"
+                                        Style="{StaticResource ClassicButton}" HorizontalAlignment="Left"
+                                        ToolTip="Permanently delete execution logs older than 90 days"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- About -->
+                        <GroupBox Header="About" Tag="loc:grp_about"
+                                  Style="{StaticResource ClassicGroupBox}">
+                            <StackPanel>
+                                <TextBlock x:Name="AboutVersionText" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentPrimaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock Text="XML to Database Integration Tool"
+                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="© 2026 AdmXmlDb"
+                                           FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -538,25 +731,33 @@
                             <ComboBox x:Name="SimTaskCombo" DisplayMemberPath="Name" Width="240" FontSize="11"
                                       SelectionChanged="SimTaskCombo_SelectionChanged" Margin="0,0,12,0"/>
                             <TextBlock Text="Select a task for XPath mappings" Tag="loc:lbl_select_task"
-                                       VerticalAlignment="Center" FontSize="11" Foreground="#666"/>
+                                       VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                         </StackPanel>
                     </GroupBox>
 
                     <TextBlock Grid.Row="1" Text="Parsed Data" Tag="loc:lbl_parsed_data"
                                FontWeight="SemiBold" FontSize="12" Margin="4,0,0,4"/>
 
-                    <DataGrid Grid.Row="2" x:Name="ParsedDataGrid" AutoGenerateColumns="True" IsReadOnly="True"
-                              HeadersVisibility="Column" CanUserAddRows="False" FontSize="11"
+                    <DataGrid Grid.Row="2" x:Name="ParsedDataGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" CanUserAddRows="False" CanUserSortColumns="True"
+                              CanUserResizeColumns="True" FontSize="11"
                               Background="White" BorderBrush="#ACACAC" BorderThickness="1"
                               GridLinesVisibility="All" HorizontalGridLinesBrush="#D0D0D0" VerticalGridLinesBrush="#D0D0D0"
-                              AlternatingRowBackground="#F7F7F7" RowBackground="White" Margin="0,0,0,8"/>
+                              AlternatingRowBackground="#F7F7F7" RowBackground="White" Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Row"    Binding="{Binding RowIndex}"   Width="45" CanUserSort="True"/>
+                            <DataGridTextColumn Header="Column" Binding="{Binding ColumnName}" Width="180" CanUserSort="True"/>
+                            <DataGridTextColumn Header="Value"  Binding="{Binding Value}"      Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
                     <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="4,0,0,4">
                         <TextBlock Text="Generated SQL" Tag="loc:lbl_gen_sql" FontWeight="SemiBold" FontSize="12"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <Button x:Name="DryRunBtn" Content="Dry Run (Test)" Tag="loc:btn_dry_run"
                                 Click="DryRunBtn_Click"
-                                Style="{StaticResource PrimaryActionButton}"/>
+                                Style="{StaticResource PrimaryActionButton}"
+                                ToolTip="Executes the mapping against the real database inside a transaction, then rolls back — no data is written"/>
                     </StackPanel>
 
                     <TextBox Grid.Row="4" x:Name="SqlOutput" IsReadOnly="True" TextWrapping="Wrap"
@@ -566,5 +767,16 @@
             </TabItem>
 
         </TabControl>
+
+        <!-- Status Bar -->
+        <StatusBar DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#ACACAC" BorderThickness="0,1,0,0" Height="22">
+            <StatusBarItem HorizontalAlignment="Left">
+                <TextBlock x:Name="StatusBarText" FontSize="11" Foreground="#555555"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right"
+                           DockPanel.Dock="Right">
+                <TextBlock x:Name="StatusBarVersion" FontSize="11" Foreground="#888888" Margin="0,0,4,0"/>
+            </StatusBarItem>
+        </StatusBar>
     </DockPanel>
 </Window>

@@ -61,6 +61,7 @@ public class XmlIntegrationJob : IJob
                 outputShare = TryConnectShare(task.OutputPath, netUser, netPass, task.Name);
                 errorShare = TryConnectShare(task.ErrorPath, netUser, netPass, task.Name);
             }
+            netPass = null; // clear decrypted credential from memory
         }
         catch (Exception ex)
         {
@@ -119,6 +120,7 @@ public class XmlIntegrationJob : IJob
             }
         }
 
+        connectionString = null; // clear decrypted credential from memory
         jobSw.Stop();
         _logger.LogInformation("Task {TaskName}: Job completed in {ElapsedMs}ms — Success: {Success}, Failed: {Failed}",
             task.Name, jobSw.ElapsedMilliseconds, successCount, failCount);
@@ -240,13 +242,6 @@ public class XmlIntegrationJob : IJob
 
                 await SendErrorNotificationAsync(db, task, fileName, ex, _logger, ct);
             }
-        }
-        catch (XmlException ex)
-        {
-            await LogExecutionAsync(db, task.Id, task.Name, fileName, "Failed", ex.ToString(), ct);
-            var errorPath = Path.Combine(task.ErrorPath, fileName);
-            SafeMoveFile(xmlPath, errorPath, _logger);
-            await SendErrorNotificationAsync(db, task, fileName, ex, _logger, ct);
         }
         catch (Exception ex)
         {

@@ -59,6 +59,7 @@ public static class ConfigXmlSerializer
             mappingEl.SetAttribute("IsLiteral", m.IsLiteral.ToString());
             mappingEl.SetAttribute("ValueTemplate", m.ValueTemplate ?? "");
             mappingEl.SetAttribute("TargetTableName", m.TargetTableName ?? "");
+            mappingEl.SetAttribute("IsRequired", m.IsRequired.ToString());
             mappingsEl.AppendChild(mappingEl);
         }
         root.AppendChild(mappingsEl);
@@ -134,6 +135,7 @@ public static class ConfigXmlSerializer
                     IsLiteral = string.Equals(m.Attributes?["IsLiteral"]?.Value, "true", StringComparison.OrdinalIgnoreCase),
                     ValueTemplate = NullIfEmpty(m.Attributes?["ValueTemplate"]?.Value ?? ""),
                     TargetTableName = NullIfEmpty(m.Attributes?["TargetTableName"]?.Value ?? ""),
+                    IsRequired = string.Equals(m.Attributes?["IsRequired"]?.Value, "true", StringComparison.OrdinalIgnoreCase),
                     SortOrder = sortOrder++
                 });
             }
