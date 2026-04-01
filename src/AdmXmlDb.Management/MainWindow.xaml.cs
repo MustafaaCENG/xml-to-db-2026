@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Net;
-using System.Net.Mail;
 using System.Reflection;
 using System.ServiceProcess;
 using System.Windows;
@@ -278,17 +276,8 @@ public partial class MainWindow : Window
                     var smtp = db.SmtpSettings.FirstOrDefault();
                     if (smtp == null || string.IsNullOrEmpty(smtp.Host))
                         return "SMTP not configured.";
-                    var password = DataProtectionHelper.Unprotect(smtp.EncryptedPassword);
-                    using var client = new SmtpClient(smtp.Host, smtp.Port)
-                    {
-                        EnableSsl = smtp.UseSsl,
-                        Credentials = string.IsNullOrEmpty(smtp.Username)
-                            ? null
-                            : new NetworkCredential(smtp.Username, password)
-                    };
-                    password = null; // clear decrypted credential from memory
-                    await client.SendMailAsync(new MailMessage(smtp.SenderEmail, smtp.SenderEmail, "AdmXmlDb Test", "Test email from AdmXmlDb."));
-                    return "Connection successful!";
+                    var error = await SmtpService.TestAsync(smtp);
+                    return error == null ? "Connection successful!" : $"Failed: {error}";
                 }
                 catch (Exception ex)
                 {
@@ -1165,13 +1154,18 @@ public partial class MainWindow : Window
     private string BuildXPathForElement(XmlElement element, string parentXPath)
     {
         var name = element.LocalName;
-        var nameAttr = element.GetAttribute("Name");
 
         string nodeXPath = $"*[local-name()='{name}']";
 
-        if (!string.IsNullOrEmpty(nameAttr))
+        // Check common identifying attributes in priority order
+        string[] identifyingAttrs = ["Name", "Sequence", "Id", "Code", "Type", "Index"];
+        foreach (var attrName in identifyingAttrs)
         {
-            return $"{parentXPath}/{nodeXPath}[@Name='{nameAttr}']";
+            var attrValue = element.GetAttribute(attrName);
+            if (!string.IsNullOrEmpty(attrValue))
+            {
+                return $"{parentXPath}/{nodeXPath}[@{attrName}='{attrValue}']";
+            }
         }
 
         // Root element (parentXPath is empty) never needs a content-based filter

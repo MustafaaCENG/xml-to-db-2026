@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Net;
-using System.Net.Mail;
 using System.Xml;
 using AdmXmlDb.Core;
 using AdmXmlDb.Core.Entities;
@@ -346,29 +344,15 @@ public class XmlIntegrationJob : IJob
             return;
         }
 
-        var password = DataProtectionHelper.Unprotect(smtp.EncryptedPassword);
         try
         {
-            using var client = new SmtpClient(smtp.Host, smtp.Port)
-            {
-                EnableSsl = smtp.UseSsl,
-                Credentials = string.IsNullOrEmpty(smtp.Username) ? null : new NetworkCredential(smtp.Username, password)
-            };
-            password = null; // clear decrypted credential from memory
-
-            using var mail = new MailMessage
-            {
-                From = new MailAddress(smtp.SenderEmail, "AdmXmlDb Worker"),
-                Subject = $"AdmXmlDb Error: {task.Name} - {filename}",
-                Body = $"Task: {task.Name}\r\nFile: {filename}\r\nError:\r\n{ex}",
-                IsBodyHtml = false
-            };
-
-            foreach (var to in emails)
-                mail.To.Add(to);
-
             logger.LogInformation("Attempting to send error email to {Count} recipients via {Host}:{Port}", emails.Length, smtp.Host, smtp.Port);
-            await client.SendMailAsync(mail);
+            await SmtpService.SendAsync(
+                smtp,
+                emails,
+                $"AdmXmlDb Error: {task.Name} - {filename}",
+                $"Task: {task.Name}\r\nFile: {filename}\r\nError:\r\n{ex}",
+                ct);
             logger.LogInformation("Error email sent successfully.");
         }
         catch (Exception smtpEx)
