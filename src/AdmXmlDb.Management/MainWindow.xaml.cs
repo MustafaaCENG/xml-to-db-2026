@@ -11,6 +11,7 @@ using AdmXmlDb.Core.Entities;
 using AdmXmlDb.Management.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using DataGrid = System.Windows.Controls.DataGrid;
 
 namespace AdmXmlDb.Management;
 

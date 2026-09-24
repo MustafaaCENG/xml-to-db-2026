@@ -1,5 +1,6 @@
 # User-defined project specific
-/installer
+/installer/out/
+/installer/Output/
 /scripts
 /test-error
 /test-input

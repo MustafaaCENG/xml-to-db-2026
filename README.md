@@ -12,7 +12,7 @@ A deployable Windows application suite consisting of a management UI and a backg
 ## Requirements
 
 - Windows 10/11 (x64)
-- .NET 9.0 Runtime
+- .NET 10.0 Desktop Runtime
 - SQL Server (target database)
 - SMTP server (for error notifications, optional)
 
